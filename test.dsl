@@ -1,8 +1,8 @@
 Load "path" as employee_data 
 Constrain employee_data as cleaned_employee_data { 
-    Region in ["NL", "BE"]
-    Income >= 30000
-    Employment_status == "employee"
-    Age < 30
+    Region (string) in ["NL", "BE"]
+    Income (float) >= 30000.00
+    Employment_status (string) == "employee"
+    Age (int) < 30
 }
 Visualise cleaned_employee_data

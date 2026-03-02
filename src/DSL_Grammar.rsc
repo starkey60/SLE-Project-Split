@@ -13,12 +13,12 @@ lexical Identifier
   = [a-zA-Z_][a-zA-Z0-9_]*;
 
 syntax Condition
-  = inList: Identifier "in" Array
-  | greaterEq: Identifier "\>=" Number
-  | greater: Identifier "\>" Number
-  | lessEq: Identifier "\<=" Number
-  | less: Identifier "\<" Number
-  | equals: Identifier "==" Value
+  = inList: Identifier "(" RowType ")" "in" Array
+  | greaterEq: Identifier "(" RowType ")"  "\>=" Number
+  | greater: Identifier "(" RowType ")"  "\>" Number
+  | lessEq: Identifier "(" RowType ")"  "\<=" Number
+  | less: Identifier "(" RowType ")"  "\<" Number
+  | equals: Identifier "(" RowType ")"  "==" Value
   ;
   
 syntax Value
@@ -26,6 +26,13 @@ syntax Value
   | string: String
   | number: Number
   | boolean: Boolean
+  ;
+
+syntax RowType
+  = intType: "int"
+  | floatType: "float"
+  | stringType: "string"
+  | boolType: "bool"
   ;
 
 syntax Array
@@ -40,7 +47,7 @@ syntax Boolean
   ; 
 
 lexical Number
-  = "-"? [0-9]*
+  = "-"? [0-9]+ ("." [0-9]+)?
   ;
 
 layout Whitespace = [\ \t\n\r]* !>> [\ \t\n\r];
