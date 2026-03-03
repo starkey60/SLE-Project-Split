@@ -2,5 +2,5 @@
 
 To test parsing:
 1. open a rascal terminal;
-2. import Parsing;
-3. run testParseFromFile with a rascal file path of the test file
+2. import testing; (its a short script, making parsing and cstToAst testing easier);
+3. call testDSL() with the raascal path of the test file (test.dsl)

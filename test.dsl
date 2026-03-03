@@ -6,6 +6,7 @@ Constrain employee_data as cleaned_employee_data {
     Region (string) == "test"
     Region (float) <= 32.20
     Region (float) < 42.45
-    Region (string) in ["test"]
+    Region (string) in ["test", "test2"]
 }
 Visualise cleaned_employee_data
+Visualise cleaned_employee_data using some_random_graph

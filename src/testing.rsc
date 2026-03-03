@@ -8,10 +8,8 @@ import IO;
 import ParseTree;
 
 
-void testDSL() {
-    loc myFile = |file:///home/starkey/SLE-Project/test.dsl|;
-
-    start[DSL] dsl = parseFromFile(myFile);
+void testDSL(loc file) {
+    start[DSL] dsl = parseFromFile(file);
     
     println("Concrete syntax tree:");
     println(dsl);

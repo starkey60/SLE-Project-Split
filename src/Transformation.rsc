@@ -16,6 +16,7 @@ ASTProgram toAST(start[DSL] dsl) {
   }
 }
 
+// Main commands (Load, Constrain, Visualise)
 ASTCommand toAST(Element el) {
     switch (el) {
         case (Element)`Load <String s> as <Identifier id>`:
@@ -32,8 +33,9 @@ ASTCommand toAST(Element el) {
 
 
 // inList condition
-ASTCondition toAST((Condition)`<Identifier col> (<RowType t>) in <Array arr>`) {
-  return inList("<col>", toAST(t), []);
+ASTCondition toAST((Condition)`<Identifier col> (<RowType t>) in [<{Value ","}* vals>]`) {
+  list[ASTValue] values = [toAST(v) | Value v <- vals];
+  return inList("<col>", toAST(t), values);
 }
  
 // greaterEq condition
@@ -66,13 +68,6 @@ ASTType toAST((RowType)`float`) = DSL_AST::floatType();
 ASTType toAST((RowType)`string`) = DSL_AST::stringType();
 ASTType toAST((RowType)`bool`) = DSL_AST::boolType();
 
-ASTValue toAST((Value)`<Number n>`) {
-  println("Here with <n>");
-  str raw = "<n>";
-  if (contains(raw,".")) return floatVal(toReal(raw));
-  return intVal(toInt(raw));
-}
-
 ASTValue toAST((Value)`<String s>`) {
   return stringVal(stripQuotes(s));
 }
@@ -81,11 +76,7 @@ ASTValue toAST((Value)`<Boolean b>`) {
   return boolVal("<b>" == "true");
 }
 
-ASTValue toAST((Array)`[<Value* vals>]`) {
-  return arrayVal([toAST(v) | v <- vals]);
-}
-
-ASTValue numberToValue(Number n) {
+ASTValue toAST(Number n) {
   str raw = "<n>";
   return contains(raw, ".")
     ? floatVal(toReal(raw))
