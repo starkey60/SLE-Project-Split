@@ -16,7 +16,7 @@ void testDSL() {
     println("Concrete syntax tree:");
     println(dsl);
 
-    Program cmd = toAST(dsl);
+    ASTProgram cmd = toAST(dsl);
     println(cmd);
 
 }
