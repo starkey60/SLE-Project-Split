@@ -1,4 +1,4 @@
-module Transformation
+module DSL_Transformation
 
 import DSL_Grammar;
 import DSL_AST;
@@ -8,12 +8,12 @@ import IO;
 
 // top level progam
 ASTProgram toAST(start[DSL] dsl) {
-  switch (dsl) {
-    case (start[DSL])`<Element* elements>`:
-        return program([ toAST(el) | el <- elements ]);
-      
-    default: throw "Top level error";
-  }
+    switch (dsl) {
+        case (start[DSL])`<Element* elements>`:
+            return program([ toAST(el) | el <- elements ]);
+            
+        default: throw "Top level error";
+    }
 }
 
 // Main commands (Load, Constrain, Visualise)
@@ -69,21 +69,21 @@ ASTType toAST((RowType)`string`) = DSL_AST::stringType();
 ASTType toAST((RowType)`bool`) = DSL_AST::boolType();
 
 ASTValue toAST((Value)`<String s>`) {
-  return stringVal(stripQuotes(s));
+    return stringVal(stripQuotes(s));
 }
 
 ASTValue toAST((Value)`<Boolean b>`) {
-  return boolVal("<b>" == "true");
+    return boolVal("<b>" == "true");
 }
 
 ASTValue toAST(Number n) {
-  str raw = "<n>";
-  return contains(raw, ".")
-    ? floatVal(toReal(raw))
-    : intVal(toInt(raw));
+    str raw = "<n>";
+    return contains(raw, ".")
+        ? floatVal(toReal(raw))
+        : intVal(toInt(raw));
 }
 
 str stripQuotes(String s) {
-  str raw = "<s>";
-  return substring(raw, 1, size(raw) - 1);
+    str raw = "<s>";
+    return substring(raw, 1, size(raw) - 1);
 }

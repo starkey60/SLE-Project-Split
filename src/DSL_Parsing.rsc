@@ -1,4 +1,4 @@
-module Parsing
+module DSL_Parsing
 
 import DSL_Grammar;
 import ParseTree;
