@@ -50,4 +50,10 @@ lexical Number
   = "-"? [0-9]+ ("." [0-9]+)?
   ;
 
-layout Whitespace = [\ \t\n\r]* !>> [\ \t\n\r];
+layout Layout = WhitespaceAndComment* !>> [\ \t\n\r%];
+
+lexical WhitespaceAndComment
+  = [\ \t\n\r]
+  | @category="Comment" block: "/*" ![%]+ "*/"
+  | @category="Comment" line: "//" ![\n]* $
+  ;
