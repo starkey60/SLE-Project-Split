@@ -1,2 +1,7 @@
 bin
+python_sources/test.py
+python_sources/test_cleaning.py
+python_sources/*.png
+__pycache__/
+*.class
 target
