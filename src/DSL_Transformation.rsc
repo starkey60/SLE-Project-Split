@@ -16,7 +16,7 @@ ASTProgram toAST(start[DSL] dsl) {
     }
 }
 
-// Main commands (Load, Constrain, Visualise)
+// Main commands (Load, Constrain, Visualise (using?))
 ASTCommand toAST(Element el) {
     switch (el) {
         case (Element)`Load <String s> as <Identifier id>`:
@@ -24,9 +24,9 @@ ASTCommand toAST(Element el) {
         case (Element)`Constrain <Identifier from_id> as <Identifier to_id> { <Condition* conds> }`:
             return constrain("<from_id>", "<to_id>", [toAST(c) | c <- conds]);
         case (Element)`Visualise <Identifier target>`:
-            return visualise("<target>", "default");
+            return visualise("<target>");
         case (Element)`Visualise <Identifier target> using <Identifier template>`:
-            return visualise("<target>", "<template>");
+            return visualiseUsing("<target>", "<template>");
         default: throw "Unknown Command Type";
     }
 }

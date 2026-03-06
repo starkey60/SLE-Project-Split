@@ -6,7 +6,8 @@ data ASTProgram
 data ASTCommand
   = load(str path, str name)
   | constrain(str source, str target, list[ASTCondition] conditions)
-  | visualise(str name, str vizType) // will have to have a default vizType if user does not provide, since optional str is not a thing
+  | visualise(str name)
+  | visualiseUsing(str name, str vizType)
   ;
 
 data ASTCondition

@@ -6,7 +6,8 @@ start syntax DSL
 syntax Element
   = load: "Load" String "as" Identifier
   | constrain: "Constrain" Identifier "as" Identifier "{" Condition* "}"
-  | visualise: "Visualise" Identifier ("using" Identifier)?
+  | visualise: "Visualise" Identifier
+  | visualiseUsing: "Visualise" Identifier "using" Identifier
   ;
 
 lexical Identifier
@@ -41,7 +42,7 @@ syntax Array
 lexical String
   = [\"] ![\"]* [\"];
 
-syntax Boolean
+lexical Boolean
   = "true"
   | "false"
   ; 
@@ -54,6 +55,6 @@ layout Layout = WhitespaceAndComment* !>> [\ \t\n\r%];
 
 lexical WhitespaceAndComment
   = [\ \t\n\r]
-  | @category="Comment" block: "/*" ![%]+ "*/"
+  | @category="Comment" block: "/*" ![]+ "*/"
   | @category="Comment" line: "//" ![\n]* $
   ;

@@ -22,8 +22,11 @@ str genCommand(ASTCommand command) {
         case constrain(source, target, conditions): {
             return genConstrain(source, target, conditions);
         }
-        case visualise(name, vizType): {
-            return genVisualise(name, vizType);
+        case visualise(name): {
+            return genVisualise(name, "default");
+        }
+        case visualiseUsing(name, vizType): {
+            return genVisualise(name, vizType);            
         }
         default: throw "Unknown command when generating code";
     }
@@ -55,9 +58,9 @@ for row in <source>:
 ";
 }
 
+// placeholder "default" for when user does not specify type. Feel free to change
 str genVisualise(str name, str vizType) {
-    name = vizType; // TEMP just to avoid unused warning;
-    return "VISUALISE IS NOT YET IMPLEMENTED\n";
+    return "# VISUALISE IS NOT YET IMPLEMENTED (vizType = <vizType>, name = <name>)\n";
 }
 
 str genCondition(ASTCondition c) {
