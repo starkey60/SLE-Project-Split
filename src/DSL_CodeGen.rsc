@@ -43,18 +43,21 @@ with open(\"<path>\", newline=\"\") as f:
 }
 
 str genConstrain(str source, str target, list[ASTCondition] conditions) {
+    str rows = genRowsConstrain(conditions);
     str conds = intercalate(
         " and\n",
         ["      " + genCondition(c) | c <- conditions]
     );
 
     return "
+<target>_filters = <rows>
 <target> = []
 for row in <source>:
     if (
 <conds>
     ):
-        <target>.append(row)
+        filtered_row = {col:row[col] for col in <target>_filters}
+        <target>.append(filtered_row)
 ";
 }
 
@@ -93,7 +96,7 @@ str genValue(ASTValue v) {
 }
 
 str genList(list[ASTValue] values) {
-    return "[" + intercalate(" ,", [ genValue(v) | v <- values]) + "]";
+    return "[" + intercalate(", ", [ genValue(v) | v <- values]) + "]";
 }
 
 str genTypedAccess(str col, ASTType t) {
@@ -108,4 +111,21 @@ str genTypedAccess(str col, ASTType t) {
             return "row[\"<col>\"] == \"true\"";
         default: throw "Unknown Typed Access";
     }
+}
+
+str getColumn(ASTCondition cond) {
+    switch (cond) {
+        case inList(col, _, _): return col;
+        case greaterEq(col, _, _): return col;
+        case greater(col, _, _): return col;
+        case lessEq(col, _, _): return col;
+        case less(col, _, _): return col;
+        case equals(col, _, _): return col;
+        default: throw "Unknown condition";
+    }
+}
+
+str genRowsConstrain(list[ASTCondition] conditions) {
+    list[str] values = [getColumn(c) | c <- conditions];
+    return "[" + intercalate(", ", ["\"<c>\"" | c <- values]) + "]";
 }

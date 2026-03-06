@@ -1,5 +1,3 @@
-#THIS WAS FULLY GENERATED FORM THE DSL
-
 import csv
 
 
@@ -9,17 +7,19 @@ with open("data.csv", newline="") as f:
     for row in reader:
         employee_data.append(row)
 
+cleaned_employee_data_filters = ["Region", "Income", "Employment_status", "Age"]
 cleaned_employee_data = []
 for row in employee_data:
     if (
-      row["Region"] in ["NL" ,"BE"] and
+      row["Region"] in ["NL", "BE"] and
       float(row["Income"]) >= 30000 and
       row["Employment_status"] == "employee" and
       int(row["Age"]) < 30
     ):
-        cleaned_employee_data.append(row)
+        filtered_row = {col:row[col] for col in cleaned_employee_data_filters}
+        cleaned_employee_data.append(filtered_row)
 
-# NOT PART OF THE DSL OUTPUT------------
+
 print("Original data:")
 for row in employee_data:
     print(row)
