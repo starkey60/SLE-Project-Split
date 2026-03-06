@@ -20,6 +20,7 @@ syntax Condition
   | lessEq: Identifier "(" RowType ")"  "\<=" Number
   | less: Identifier "(" RowType ")"  "\<" Number
   | equals: Identifier "(" RowType ")"  "==" Value
+  | keep: Identifier "(" RowType ")" "keep" //NEEDS FEEDBACK: does such grammar make sense for when we want to keep a col without any constrains
   ;
   
 syntax Value

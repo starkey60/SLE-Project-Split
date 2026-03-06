@@ -7,7 +7,7 @@ with open("data.csv", newline="") as f:
     for row in reader:
         employee_data.append(row)
 
-cleaned_employee_data_filters = ["Region", "Income", "Employment_status", "Age"]
+cleaned_employee_data_filters = ["Region", "Income", "Employment_status", "Age", "Pets"]
 cleaned_employee_data = []
 for row in employee_data:
     if (
@@ -18,7 +18,7 @@ for row in employee_data:
     ):
         filtered_row = {col:row[col] for col in cleaned_employee_data_filters}
         cleaned_employee_data.append(filtered_row)
-
+# VISUALISE IS NOT YET IMPLEMENTED (vizType = template, name = employee_data)
 
 print("Original data:")
 for row in employee_data:

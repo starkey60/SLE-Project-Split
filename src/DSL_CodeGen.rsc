@@ -4,6 +4,7 @@ import DSL_AST;
 import DSL_Transformation;
 import String;
 import List;
+import util::Maybe;
 
 str generate(ASTProgram program) {
     str code = "import csv\n\n";
@@ -44,9 +45,10 @@ with open(\"<path>\", newline=\"\") as f:
 
 str genConstrain(str source, str target, list[ASTCondition] conditions) {
     str rows = genRowsConstrain(conditions);
+    list[str] condList = [c | just(c) <- [genCondition(c) | c <- conditions]];
     str conds = intercalate(
         " and\n",
-        ["      " + genCondition(c) | c <- conditions]
+        ["      " + cond | cond <- condList]
     );
 
     return "
@@ -66,20 +68,22 @@ str genVisualise(str name, str vizType) {
     return "# VISUALISE IS NOT YET IMPLEMENTED (vizType = <vizType>, name = <name>)\n";
 }
 
-str genCondition(ASTCondition c) {
+Maybe[str] genCondition(ASTCondition c) {
     switch(c) {
         case inList(col, t, values):
-            return "<genTypedAccess(col, t)> in <genList(values)>";
+            return just("<genTypedAccess(col, t)> in <genList(values)>");
         case greaterEq(col, t, v):
-            return "<genTypedAccess(col, t)> \>= <genValue(v)>";
+            return just("<genTypedAccess(col, t)> \>= <genValue(v)>");
         case greater(col, t, v):
-            return "<genTypedAccess(col, t)> \> <genValue(v)>";
+            return just("<genTypedAccess(col, t)> \> <genValue(v)>");
         case lessEq(col, t, v):
-            return "<genTypedAccess(col, t)> \<= <genValue(v)>";
+            return just("<genTypedAccess(col, t)> \<= <genValue(v)>");
         case less(col, t, v):
-            return "<genTypedAccess(col, t)> \< <genValue(v)>";
+            return just("<genTypedAccess(col, t)> \< <genValue(v)>");
         case equals(col, t, v):
-            return "<genTypedAccess(col, t)> == <genValue(v)>";
+            return just("<genTypedAccess(col, t)> == <genValue(v)>");
+        case keep(_, _):
+            return nothing(); 
         default: throw "Unknown Condition";
     }
 }
@@ -121,6 +125,7 @@ str getColumn(ASTCondition cond) {
         case lessEq(col, _, _): return col;
         case less(col, _, _): return col;
         case equals(col, _, _): return col;
+        case keep(col, _): return col;
         default: throw "Unknown condition";
     }
 }

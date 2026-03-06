@@ -63,6 +63,11 @@ ASTCondition toAST((Condition)`<Identifier col> (<RowType t>) == <Value v>`) {
     return equals("<col>", toAST(t), toAST(v));
 }
 
+// keep condition
+ASTCondition toAST((Condition)`<Identifier col> (<RowType t>) keep`) {
+    return keep("<col>", toAST(t));
+}
+
 ASTType toAST((RowType)`int`) = DSL_AST::intType();
 ASTType toAST((RowType)`float`) = DSL_AST::floatType();
 ASTType toAST((RowType)`string`) = DSL_AST::stringType();

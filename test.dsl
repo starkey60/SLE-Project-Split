@@ -1,6 +1,6 @@
 /*
-    this is a block comment
-*/
+    this is a block comment 
+*/ 
 
 Load "data.csv" as employee_data // inline
 Constrain employee_data as cleaned_employee_data {
@@ -8,5 +8,7 @@ Constrain employee_data as cleaned_employee_data {
     Income (float) >= 30000
     Employment_status (string) == "employee"
     Age (int) < 30
+    Pets (bool) keep
 }
+Visualise employee_data using template
 //another inline

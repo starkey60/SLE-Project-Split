@@ -17,6 +17,7 @@ data ASTCondition
   | lessEq(str column, ASTType t, ASTValue v)
   | less(str column, ASTType t, ASTValue v)
   | equals(str column, ASTType t, ASTValue v)
+  | keep(str column, ASTType t)
   ;
 
 data ASTType
