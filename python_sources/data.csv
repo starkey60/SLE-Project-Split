@@ -8,3 +8,5 @@
 "NL","35000","employee","23","stuff","true"
 "NL","29500","employee","29","stuff","true"
 "BE","185000","employee","45","stuff","false"
+"NL","","employee","22","stuff","true"
+"BE","40000","","26","stuff","false"
