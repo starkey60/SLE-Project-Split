@@ -8,6 +8,11 @@ syntax Element
   | constrain: "Constrain" Identifier "as" Identifier "{" Condition* "}"
   | visualise: "Visualise" Identifier
   | visualiseUsing: "Visualise" Identifier "using" Identifier
+  | rename: "Rename" Identifier "column" String "to" String
+  | sortAsc: "Sort" Identifier "by" Identifier "(" RowType ")" "ascending"
+  | sortDesc: "Sort" Identifier "by" Identifier "(" RowType ")" "descending"
+  | groupByCount: "GroupBy" Identifier "by" Identifier "count"
+  | groupByAgg: "GroupBy" Identifier "by" Identifier AggType Identifier "(" RowType ")" 
   ;
 
 lexical Identifier
@@ -21,6 +26,7 @@ syntax Condition
   | less: Identifier "(" RowType ")"  "\<" Number
   | equals: Identifier "(" RowType ")"  "==" Value
   | keep: Identifier "(" RowType ")" "keep" //NEEDS FEEDBACK: does such grammar make sense for when we want to keep a col without any constrains
+  | dropna: Identifier "(" RowType ")" "dropna"
   ;
   
 syntax Value
@@ -37,6 +43,13 @@ syntax RowType
   | boolType: "bool"
   ;
 
+syntax AggType
+  = aggSum: "sum"
+  | aggAvg: "avg"
+  | aggMin: "min"
+  | aggMax: "max"
+  ;
+  
 syntax Array
   = "[" {Value ","}* "]";
 
