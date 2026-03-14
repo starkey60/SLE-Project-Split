@@ -40,6 +40,7 @@ data ASTIO
 data ASTVis
   = defaultVis()
   | table()
+  | tableImage()
   ;
 
 data ASTSort
