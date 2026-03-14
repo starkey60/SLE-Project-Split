@@ -3,44 +3,57 @@ module DSL_Grammar
 start syntax DSL
   = element: Element*;
 
+// top-level commands
 syntax Element
   = load: "Load" String "as" Identifier
-  | constrain: "Constrain" Identifier "as" Identifier "{" Condition* "}"
+  | save: "Save" Identifier "as" String
+  | filterDataset: "Filter" Identifier "as" Identifier "{" FilterCondition* "}"
+  | transformDataset: "Transform" Identifier "{"Transformation* "}"
   | visualise: "Visualise" Identifier
-  | visualiseUsing: "Visualise" Identifier "using" Identifier
-  | rename: "Rename" Identifier "column" String "to" String
-  | sortAsc: "Sort" Identifier "by" Identifier "(" RowType ")" "ascending"
-  | sortDesc: "Sort" Identifier "by" Identifier "(" RowType ")" "descending"
+  | visualiseUsing: "Visualise" Identifier "using" VisType
   | groupByCount: "GroupBy" Identifier "by" Identifier "count"
-  | groupByAgg: "GroupBy" Identifier "by" Identifier AggType Identifier "(" RowType ")" 
+  | groupByAgg: "GroupBy" Identifier "by" Identifier AggType Identifier "(" CastType ")" 
   ;
 
-lexical Identifier
-  = [a-zA-Z_][a-zA-Z0-9_]*;
-
-syntax Condition
-  = inList: Identifier "(" RowType ")" "in" Array
-  | greaterEq: Identifier "(" RowType ")"  "\>=" Number
-  | greater: Identifier "(" RowType ")"  "\>" Number
-  | lessEq: Identifier "(" RowType ")"  "\<=" Number
-  | less: Identifier "(" RowType ")"  "\<" Number
-  | equals: Identifier "(" RowType ")"  "==" Value
-  | keep: Identifier "(" RowType ")" "keep" //NEEDS FEEDBACK: does such grammar make sense for when we want to keep a col without any constrains
-  | dropna: Identifier "(" RowType ")" "dropna"
-  ;
-  
-syntax Value
-  = array: Array
-  | string: String
-  | number: Number
-  | boolean: Boolean
+// filter conditions (inside Filter block)
+syntax FilterCondition
+  = inList: Identifier "(" CastType ")" "in" Array
+  | comparison: Identifier "(" CastType ")" EqualityOp Value
   ;
 
-syntax RowType
-  = intType: "int"
-  | floatType: "float"
-  | stringType: "string"
-  | boolType: "bool"
+// transformations (inside Transform block)
+syntax Transformation
+  = rename: "rename" String "to" String
+  | sortBy: "sort" Identifier "(" CastType ")" SortOrder
+  | dropna: "dropna" Identifier
+  | keep: "keep" Identifier
+  ;
+
+// operator and type definitions
+
+syntax EqualityOp
+  = geq: "\>="
+  | gt: "\>"
+  | leq:"\<="
+  | lt: "\<"
+  | eq: "=="
+  ;
+
+syntax SortOrder
+  = ascending: "ascending"
+  | descending: "descending"
+  ;
+
+syntax VisType
+  = visTable: "table"
+  | visTableImage: "table_image"
+  ;
+
+syntax CastType
+  = intCast: "int"
+  | floatCast: "float"
+  | stringCast: "string"
+  | boolCast: "bool"
   ;
 
 syntax AggType
@@ -49,9 +62,23 @@ syntax AggType
   | aggMin: "min"
   | aggMax: "max"
   ;
-  
+
+// values
+
+syntax Value
+  = array: Array
+  | string: String
+  | number: Number
+  | boolean: Boolean
+  ;
+
 syntax Array
   = "[" {Value ","}* "]";
+
+// lexicals
+
+lexical Identifier
+  = [a-zA-Z_][a-zA-Z0-9_]*;
 
 lexical String
   = [\"] ![\"]* [\"];
@@ -64,6 +91,8 @@ lexical Boolean
 lexical Number
   = "-"? [0-9]+ ("." [0-9]+)?
   ;
+
+// layout rules (whitespace and comments)
 
 layout Layout = WhitespaceAndComment* !>> [\ \t\n\r%];
 
