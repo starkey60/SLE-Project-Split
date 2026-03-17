@@ -19,7 +19,7 @@ data ASTFilter
 
 data ASTTransformation
   = rename(str column, str newName)
-  | sort(str col, ASTSort sort, ASTCast cast)
+  | sort(str column, ASTSort sort, ASTCast cast)
   | dropna(str column)
   | keep(str column)
   ;
