@@ -20,84 +20,110 @@ ASTProgram toAST(start[DSL] dsl) {
 ASTCommand toAST(Element el) {
     switch (el) {
         case (Element)`Load <String s> as <Identifier id>`:
-            return load("<stripQuotes(s)>", "<id>");
-        case (Element)`Constrain <Identifier from_id> as <Identifier to_id> { <Condition* conds> }`:
-            return constrain("<from_id>", "<to_id>", [toAST(c) | c <- conds]);
+            return io("<stripQuotes(s)>", "<id>", load());
+        case (Element)`Save <Identifier id> as <String s>`:
+            return io("<stripQuotes(s)>", "<id>", save());
+        case (Element)`Filter <Identifier from_id> { <FilterCondition* conds> }`:
+            return filterDataset("<from_id>", [toAST(c) | c <- conds]);
+        case (Element)`Transform <Identifier from_id> { <Transformation* transformations> }`:
+            return transformDataset("<from_id>", [toAST(t) | t <- transformations]);
         case (Element)`Visualise <Identifier target>`:
-            return visualise("<target>");
-        case (Element)`Visualise <Identifier target> using <Identifier template>`:
-            return visualiseUsing("<target>", "<template>");
-        case (Element)`Rename <Identifier src> column <String oldCol> to <String newCol>`:
-            return rename("<src>", "<stripQuotes(oldCol)>", "<stripQuotes(newCol)>");
-        case (Element)`Sort <Identifier src> by <Identifier col> (<RowType t>) ascending`:
-            return sortAsc("<src>", "<col>", toAST(t));
-        case (Element)`Sort <Identifier src> by <Identifier col> (<RowType t>) descending`:
-            return sortDesc("<src>", "<col>", toAST(t));
-        case (Element)`GroupBy <Identifier src> by <Identifier col> count`:
-            return groupByCount("<src>", "<col>");
-        case (Element)`GroupBy <Identifier src> by <Identifier col> <AggType agg> <Identifier valCol> (<RowType t>)`:
-            return groupByAgg("<src>", "<col>", toAST(agg), "<valCol>", toAST(t));
-        default: throw "Unknown Command Type";
+            return visualise("<target>", defaultVis());
+        case (Element)`Visualise <Identifier target> using <VisType template>`:
+            return visualise("<target>", toAST(template));
+        case (Element)`GroupBy <Identifier src> by <String col> count`:
+            return groupByCount("<src>", "<stripQuotes(col)>");
+        case (Element)`GroupBy <Identifier src> by <String col> <AggType agg> <String valCol> (<CastType t>)`:
+            return groupByAgg("<src>", "<stripQuotes(col)>", toAST(agg), "<stripQuotes(valCol)>", toAST(t));
+        default: throw "Unknown Command Type <el>";
     }
 }
 
-
-// inList condition
-ASTCondition toAST((Condition)`<Identifier col> (<RowType t>) in [<{Value ","}* vals>]`) {
-  list[ASTValue] values = [toAST(v) | Value v <- vals];
-  return inList("<col>", toAST(t), values);
-}
- 
-// greaterEq condition
-ASTCondition toAST((Condition)`<Identifier col> (<RowType t>) \>= <Number n>`){
-    return greaterEq("<col>", toAST(t), toAST(n));
-}
-
-// greater condition
-ASTCondition toAST((Condition)`<Identifier col> (<RowType t>) \> <Number n>`){
-    return greater("<col>", toAST(t), toAST(n));
+// filter conditions
+ASTFilter toAST(FilterCondition cond) {
+    switch (cond) {
+        case (FilterCondition)`<String col> (<CastType t>) in [<{Value ","}* vals>]`: {
+            list[ASTValue] values = [toAST(v) | Value v <- vals];
+            return inList("<stripQuotes(col)>", values, toAST(t));
+        }
+        case (FilterCondition)`<String col> (<CastType t>) <EqualityOp operator> <Value val>`:
+            return equality("<stripQuotes(col)>", toAST(val), toAST(operator), toAST(t));
+        default: throw "unknown filter condition <cond>";
+    }
 }
 
-// lessEq condition
-ASTCondition toAST((Condition)`<Identifier col> (<RowType t>) \<= <Number n>`){
-    return lessEq("<col>", toAST(t), toAST(n));
+//equality operations
+ASTEquality toAST(EqualityOp op) {
+    switch (op) {
+        case (EqualityOp) `\>=`: return greaterEq();
+        case (EqualityOp) `\>`:  return greater();
+        case (EqualityOp) `\<=`: return lessEq();
+        case (EqualityOp) `\<`:  return less();
+        case (EqualityOp) `==`: return equals();
+        case (EqualityOp) `!=`: return notEquals();
+        default: throw "unknown equality operator <op>";
+    }
 }
 
-// less condition
-ASTCondition toAST((Condition)`<Identifier col> (<RowType t>) \< <Number n>`){
-    return less("<col>", toAST(t), toAST(n));
+// transformation
+ASTTransformation toAST(Transformation t) {
+    switch (t) {
+        case (Transformation)`keep <String col>`:
+            return keep("<stripQuotes(col)>");
+        case (Transformation)`dropna <String col>`:
+            return dropna("<stripQuotes(col)>");
+        case (Transformation)`sort <String col> (<CastType cast>) <SortOrder order>`:
+            return sort("<stripQuotes(col)>", toAST(order), toAST(cast));
+        case (Transformation)`rename <String col> to <String s>`:
+            return rename("<stripQuotes(col)>", "<stripQuotes(s)>");
+        default: throw "unknown transformation <t>";
+    }
 }
 
-// equals condition
-ASTCondition toAST((Condition)`<Identifier col> (<RowType t>) == <Value v>`) {
-    return equals("<col>", toAST(t), toAST(v));
+// sorting orders
+ASTSort toAST(SortOrder order) {
+    switch (order) {
+        case (SortOrder) `ascending`: return ascending();
+        case (SortOrder) `descending`: return descending();
+        default: throw "Unknonw sort order <order>";
+    }
 }
 
-// keep condition
-ASTCondition toAST((Condition)`<Identifier col> (<RowType t>) keep`) {
-    return keep("<col>", toAST(t));
+// casts
+ASTCast toAST(CastType cast) {
+    switch (cast) {
+        case (CastType) `int`: return intCast();
+        case (CastType) `float`:  return floatCast();
+        case (CastType) `string`: return stringCast();
+        case (CastType) `bool`:  return floatCast();
+        default: throw "unknown cast type <cast>";
+    }
 }
 
-// dropna condition
-ASTCondition toAST((Condition)`<Identifier col> (<RowType t>) dropna`) {
-    return dropna("<col>", toAST(t));
-}
-
-ASTType toAST((RowType)`int`) = DSL_AST::intType();
-ASTType toAST((RowType)`float`) = DSL_AST::floatType();
-ASTType toAST((RowType)`string`) = DSL_AST::stringType();
-ASTType toAST((RowType)`bool`) = DSL_AST::boolType();
 ASTAggType toAST((AggType)`sum`) = DSL_AST::aggSum();
 ASTAggType toAST((AggType)`avg`) = DSL_AST::aggAvg();
 ASTAggType toAST((AggType)`min`) = DSL_AST::aggMin();
 ASTAggType toAST((AggType)`max`) = DSL_AST::aggMax();
 
-ASTValue toAST((Value)`<String s>`) {
-    return stringVal(stripQuotes(s));
+// visualisations
+ASTVis toAST(VisType t) {
+    switch (t) {
+        case (VisType) `table`: return table();
+        case (VisType) `table_image`: return tableImage();
+        default: throw "unknown visualisation type <t>";
+    }
 }
 
-ASTValue toAST((Value)`<Boolean b>`) {
-    return boolVal("<b>" == "true");
+ASTValue toAST(Value val) {
+    switch (val) {
+        case (Value)`<String s>`:
+            return stringVal(stripQuotes(s));
+        case (Value)`<Boolean b>`:
+            return boolVal("<b>" == "true");
+        case (Value)`<Number n>`: 
+            return toAST(n);
+        default: throw "Could not transform value <val>";
+    }
 }
 
 ASTValue toAST(Number n) {
