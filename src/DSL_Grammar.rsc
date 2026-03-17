@@ -7,36 +7,36 @@ start syntax DSL
 syntax Element
   = load: "Load" String "as" Identifier
   | save: "Save" Identifier "as" String
-  | filterDataset: "Filter" Identifier "as" Identifier "{" FilterCondition* "}"
+  | filterDataset: "Filter" Identifier "{" FilterCondition* "}"
   | transformDataset: "Transform" Identifier "{"Transformation* "}"
   | visualise: "Visualise" Identifier
   | visualiseUsing: "Visualise" Identifier "using" VisType
-  | groupByCount: "GroupBy" Identifier "by" Identifier "count"
-  | groupByAgg: "GroupBy" Identifier "by" Identifier AggType Identifier "(" CastType ")" 
+  | groupByCount: "GroupBy" Identifier "by" String "count"
+  | groupByAgg: "GroupBy" Identifier "by" String AggType String "(" CastType ")"
   ;
 
 // filter conditions (inside Filter block)
 syntax FilterCondition
-  = inList: Identifier "(" CastType ")" "in" Array
-  | comparison: Identifier "(" CastType ")" EqualityOp Value
+  = inList: String "(" CastType ")" "in" Array
+  | equality: String "(" CastType ")" EqualityOp Value
   ;
 
 // transformations (inside Transform block)
 syntax Transformation
   = rename: "rename" String "to" String
-  | sortBy: "sort" Identifier "(" CastType ")" SortOrder
-  | dropna: "dropna" Identifier
-  | keep: "keep" Identifier
+  | sortBy: "sort" String "(" CastType ")" SortOrder
+  | dropna: "dropna" String
+  | keep: "keep" String
   ;
 
-// operator and type definitions
-
+// operator and type definition
 syntax EqualityOp
   = geq: "\>="
   | gt: "\>"
   | leq:"\<="
   | lt: "\<"
   | eq: "=="
+  | ne: "!="
   ;
 
 syntax SortOrder
@@ -64,7 +64,6 @@ syntax AggType
   ;
 
 // values
-
 syntax Value
   = array: Array
   | string: String
@@ -76,7 +75,6 @@ syntax Array
   = "[" {Value ","}* "]";
 
 // lexicals
-
 lexical Identifier
   = [a-zA-Z_][a-zA-Z0-9_]*;
 
@@ -93,7 +91,6 @@ lexical Number
   ;
 
 // layout rules (whitespace and comments)
-
 layout Layout = WhitespaceAndComment* !>> [\ \t\n\r%];
 
 lexical WhitespaceAndComment
