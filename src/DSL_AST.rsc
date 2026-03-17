@@ -5,10 +5,9 @@ data ASTProgram
 
 data ASTCommand
   = io(str path, str name, ASTIO io)
-  | filterDataset(str source, str target, list[ASTFilter] filters)
+  | filterDataset(str source, list[ASTFilter] filters)
   | transformDataset(str source, list[ASTTransformation] transformations)
-  | visualise(str name)
-  | visualiseUsing(str name, ASTVis vis)
+  | visualise(str name, ASTVis vis)
   | groupByCount(str source, str groupCol)
   | groupByAgg(str source, str groupCol, ASTAggType aggType, str valueCol, ASTCast cast)
   ;
@@ -20,7 +19,7 @@ data ASTFilter
 
 data ASTTransformation
   = rename(str column, str newName)
-  | sort(str source, str col, ASTSort sort, ASTCast cast)
+  | sort(str col, ASTSort sort, ASTCast cast)
   | dropna(str column)
   | keep(str column)
   ;
@@ -54,6 +53,7 @@ data ASTEquality
   | lessEq()
   | less()
   | equals()
+  | notEquals()
   ;
 
 data ASTValue
