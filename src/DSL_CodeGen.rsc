@@ -12,9 +12,7 @@ str generate(ASTProgram program) {
 
     for (cmd <- program.commands) {
         if (cmd is visualise) {
-            needsTabulate = true;
-        }
-        if (cmd is visualise) {
+            if (cmd.vis == defaultVis()) needsTabulate = true;
             if (cmd.vis == table()) needsTabulate = true;
             if (cmd.vis == tableImage()) needsMatplotlib = true;
         }
@@ -103,19 +101,47 @@ str genTransformDataset(str source, list[ASTTransformation] transformations) {
 
     str keeps = genKeepTransformation(source, transformations);
 
-    return "<keeps> <renamesTransformation> <sortsTransformation> <dropnasTransformation>";
+    return "<dropnasTransformation> <keeps> <renamesTransformation> <sortsTransformation>";
 }
 
 str genRenameTransformation(str source, list[ASTTransformation] renames) {
-    return "\nTODO rename\n";
+    str code = "";
+    for (r <- renames) {
+        if (r is rename) {
+            code += genRename(source, r.column, r.newName);
+        }
+    }
+    return code;
 }
 
 str genSortTransformation(str source, list[ASTTransformation] sorts) {
-    return "\nTODO sort\n";
+    str code = "";
+    for (s <- sorts) {
+        if (s is sort) {
+            code += genSort(source, s.column, s.cast, s.sort);
+        }
+    }
+    return code;
 }
 
-str genDropnaTransformation(str source, list[ASTTransformation] dropna) {
-    return "\nTODO dropna\n";
+str genDropnaTransformation(str source, list[ASTTransformation] dropnas) {
+    list[str] checks = [];
+    for (d <- dropnas) {
+        if (d is dropna) {
+            checks += "str(row[\'<d.column>\']).strip() != \'\'";
+        }
+    }
+    str conds = intercalate(" and\n      ", checks);
+    return
+"
+<source>_clean = []
+for row in <source>:
+    if (
+      <conds>
+    ):
+        <source>_clean.append(row)
+<source> = <source>_clean
+";
 }
 
 str genKeepTransformation(str source, list[ASTTransformation] transformations) {
@@ -133,11 +159,12 @@ for row in <source>:
 }
 
 str genRowsConstrain(list[ASTTransformation] transformations) {
-    set[str] values =
-        {c | rename(c, _) <- transformations}
-        + {c | sort(c, _, _) <- transformations}
-        + {c | dropna(c) <- transformations}
-        + {c | keep(c) <- transformations};
+    list[str] values = dup(
+        [c | keep(c) <- transformations]
+        + [c | rename(c, _) <- transformations]
+        + [c | sort(c, _, _) <- transformations]
+        + [c | dropna(c) <- transformations]
+    );
     return "[" + intercalate(", ", ["\"<c>\"" | c <- values]) + "]";
 }
 
@@ -169,9 +196,9 @@ str genFilter(ASTFilter f) {
 
 str genVisualise(str dataName, ASTVis vis) {
     switch (vis) {
-        case defaultVis(): return "\nTODO defaultVis with <dataName>";
-        case table(): return "\nTODO table with <dataName>";
-        case tableImage(): return "\nTODO tableImage with <dataName>";
+        case defaultVis(): return genVisualiseTable(dataName);
+        case table(): return genVisualiseTable(dataName);
+        case tableImage(): return genVisualiseTableImage(dataName);
         default: throw "Unknown vis type during codegen <vis>";
     }
 }
@@ -284,14 +311,13 @@ for _row in <source>:
 }
 
 // sort source by col of type t, descending if specified
-str genSort(str source, str col, ASTCast cast, ASTSort sort) {
-    return "\nTODO genSort(<source>, <col>, <cast>, <sort>)\n";
-//     str access = genTypedAccess(col, t);
-//     str rev = descending ? "True" : "False";
-//     return
-// "
-// <source>.sort(key=lambda row: <access>, reverse=<rev>)
-// ";
+str genSort(str source, str col, ASTCast cast, ASTSort sortOrder) {
+    str access = genCast(col, cast);
+    str rev = (sortOrder == descending()) ? "True" : "False";
+    return
+"
+<source>.sort(key=lambda row: <access>, reverse=<rev>)
+";
 }
 
 // group cource by col, count occurences
@@ -310,21 +336,19 @@ for _key in sorted(_groups.keys()):
 
 // group source by aggregation (sum, avg, min, max)
 str genGroupByAgg(str source, str groupCol, ASTAggType aggType, str valueCol, ASTCast cast) {
-    return "\nTODO genGroupByAgg(<source>, <groupCol>, <aggType>, <valueCol>, <cast>)\n";
-    // str typeFunc = genTypeFunc(valType);
-    // str aggName = getAggName(aggType);
+    str typeFunc = genCastFunc(cast);
+    str aggName = getAggName(aggType);
 
-    // if (aggType == aggAvg()) {
-    //     return genGroupByAvg(source, groupCol, valueCol, typeFunc);
-    // }
-    // if (aggType == aggMin()) {
-    //     return genGroupByMinMax(source, groupCol, valueCol, typeFunc, "min", "\<");
-    // }
-    // if (aggType == aggMax()) {
-    //     return genGroupByMinMax(source, groupCol, valueCol, typeFunc, "max", "\>");
-    // }
-    // // default: sum
-    // return genGroupBySum(source, groupCol, valueCol, typeFunc);
+    if (aggType == aggAvg()) {
+        return genGroupByAvg(source, groupCol, valueCol, typeFunc);
+    }
+    if (aggType == aggMin()) {
+        return genGroupByMinMax(source, groupCol, valueCol, typeFunc, "min", "\<");
+    }
+    if (aggType == aggMax()) {
+        return genGroupByMinMax(source, groupCol, valueCol, typeFunc, "max", "\>");
+    }
+    return genGroupBySum(source, groupCol, valueCol, typeFunc);
 }
 
 // GroupBy: <source> by <groupCol> (sum <valueCol>)
@@ -375,16 +399,16 @@ for _key in sorted(_groups.keys()):
 ";
 }
 
-// // helper: get just the Python type function name
-// str genTypeFunc(ASTType t) {
-//     switch(t) {
-//         case intType(): return "int";
-//         case floatType(): return "float";
-//         case stringType(): return "str";
-//         case boolType(): return "bool";
-//         default: throw "Unknown type for aggregation";
-//     }
-// }
+// helper: get the full expression
+str genCastFunc(ASTCast cast) {
+    switch(cast) {
+        case intCast(): return "int";
+        case floatCast(): return "float";
+        case stringCast(): return "str";
+        case boolCast(): return "bool";
+        default: throw "Unknown cast type";
+    }
+}
 
 // helper: get aggregation name as string
 str getAggName(ASTAggType aggType) {
