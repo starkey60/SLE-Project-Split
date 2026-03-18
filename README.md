@@ -17,4 +17,24 @@ LSP status:
 1. open a rascal terminal;
 2. import DSL_LSP;
 3. run register();
-This should result in errors showing when a .dsl file cant be parsed in vscode itself. However, no concrete error messages are shown, nor syntax is highlighted.
+4. check open up `warning_error_test.dsl` to check for errors and warnings showing. You may need to refresh (delete a character and save)
+
+## Warnings And Errors
+
+Warnings:
+* **W01**: Dataset \<name\> is already defined
+    * Importing a dataset under a name, that is already used for a different dataset. Leads to undefined behaviour
+* **W02**: Path \<path\> doesn't end with .csv
+    * Providing a path, that does not end with a .csv. May still be a usable dictionary file.
+
+Errors:
+* **E01**: Undefined dataset \<name\>
+    * Using a dataset under \<name\> that does not exist. Import the dataset using `Load` keyword or double check for typos. 
+* **E02**: Cast \<cast\> on \<column\> can only use == or != equality
+    * `bool` and `string` casted columns can only use == and != equalities
+* **E03**: Value \<value\> is incompatible with cast \<cast\> on \<column\>
+    * Type mismatch
+* **E04**: Array contains items of different types
+    * Heterogeneous arrays are not supported
+* **E05**: Cast \<cast\> used on array of type \<type\>
+    * Type mismatch
