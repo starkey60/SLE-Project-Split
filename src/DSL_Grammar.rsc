@@ -8,7 +8,7 @@ syntax Element
   = load: "Load" String "as" Identifier
   | save: "Save" Identifier "as" String
   | filterDataset: "Filter" Identifier "{" FilterCondition* "}"
-  | transformDataset: "Transform" Identifier "{"Transformation* "}"
+  | transformDataset: "Transform" Identifier "{" Transformation* "}"
   | visualise: "Visualise" Identifier
   | visualiseUsing: "Visualise" Identifier "using" VisType
   | groupByCount: "GroupBy" Identifier "by" String "count"
