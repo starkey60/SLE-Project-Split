@@ -79,11 +79,11 @@ with open(\"<path>\", newline=\"\") as f:
 str genSave(str path, str name) {
     return "
 with open(\"<path>\", \"w\", newline=\"\") as f:
-    fields = <name>[0].keys()
-
-    writer = csv.DictWriter(f, fieldnames=fields)
-    writer.writeheader()
-    writer.writerows(<name>)
+    if <name>:
+        fields = <name>[0].keys()
+        writer = csv.DictWriter(f, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(<name>)
 ";
 }
 
