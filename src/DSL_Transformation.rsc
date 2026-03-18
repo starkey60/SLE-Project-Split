@@ -95,7 +95,7 @@ ASTCast toAST(CastType cast) {
         case (CastType) `int`: return intCast();
         case (CastType) `float`:  return floatCast();
         case (CastType) `string`: return stringCast();
-        case (CastType) `bool`:  return floatCast();
+        case (CastType) `bool`:  return boolCast();
         default: throw "unknown cast type <cast>";
     }
 }

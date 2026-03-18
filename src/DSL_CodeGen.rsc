@@ -4,7 +4,6 @@ import DSL_AST;
 import DSL_Transformation;
 import String;
 import List;
-import util::Maybe;
 
 str generate(ASTProgram program) {
     str code = "import csv\n\n";
@@ -90,18 +89,62 @@ with open(\"<path>\", \"w\", newline=\"\") as f:
 ";
 }
 
+//transform the genFilterDataset
 str genTransformDataset(str source, list[ASTTransformation] transformations) {
-    str colsToKeep = genRowsToKeep(transformations);
-    return "\nTODO genTransform(<source>, transformations)\n";
+    // separate different transformations
+    list[ASTTransformation] renames = [t | t: rename(_, _) <- transformations];
+    str renamesTransformation = isEmpty(renames) ? "" : genRenameTransformation(source, renames);
+
+    list[ASTTransformation] sorts = [t | t: sort(_, _, _) <- transformations];
+    str sortsTransformation = isEmpty(sorts) ? "" : genSortTransformation(source, sorts);
+
+    list[ASTTransformation] dropnas = [t | t: dropna(_) <- transformations];
+    str dropnasTransformation = isEmpty(dropnas) ? "" : genDropnaTransformation(source, dropnas);
+
+    str keeps = genKeepTransformation(source, transformations);
+
+    return "<keeps> <renamesTransformation> <sortsTransformation> <dropnasTransformation>";
+}
+
+str genRenameTransformation(str source, list[ASTTransformation] renames) {
+    return "\nTODO rename\n";
+}
+
+str genSortTransformation(str source, list[ASTTransformation] sorts) {
+    return "\nTODO sort\n";
+}
+
+str genDropnaTransformation(str source, list[ASTTransformation] dropna) {
+    return "\nTODO dropna\n";
+}
+
+str genKeepTransformation(str source, list[ASTTransformation] transformations) {
+    // extract columns that the transformed dataset will contain 
+    str colsToKeep = genRowsConstrain(transformations);
+
+    return "
+filters = <colsToKeep>    
+filtered_<source> = []
+for row in <source>:
+    filtered_row = {k: row[k] for k in filters if k in row}
+    filtered_<source>.append(filtered_row)
+<source> = filtered_<source>
+";
+}
+
+str genRowsConstrain(list[ASTTransformation] transformations) {
+    set[str] values =
+        {c | rename(c, _) <- transformations}
+        + {c | sort(c, _, _) <- transformations}
+        + {c | dropna(c) <- transformations}
+        + {c | keep(c) <- transformations};
+    return "[" + intercalate(", ", ["\"<c>\"" | c <- values]) + "]";
 }
 
 // just filters loaded columns, no ordering or keeping constrains
 str genFilterDataset(str source, list[ASTFilter] filters) {
     list[str] filtList = [genFilter(f) | f <- filters];
-    str conds = intercalate(
-        " and\n",
-        ["      " + f | f <- filtList]
-    );
+    str conds = intercalate( " and\n", ["      " + f | f <- filtList] );
 
     return "
 <source>_filtered = []
@@ -229,11 +272,6 @@ str genEqualityOperator(ASTEquality eq) {
         case notEquals(): return "!=";
         default: throw "Unknown equality operator";
     }
-}
-
-str genRowsToKeep(list[ASTTransformation] transformations) {
-    list[str] values = [c.column | c <- transformations];
-    return "[" + intercalate(", ", ["\"<c>\"" | c <- values]) + "]";
 }
 
 // rename oldCol to newCol in source
