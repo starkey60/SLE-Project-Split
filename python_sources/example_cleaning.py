@@ -11,53 +11,63 @@ with open("data.csv", newline="") as f:
     for row in reader:
         employee_data.append(row)
 
-# Step 2: Clean — dropna + filter + keep
-cleaned_data = []
+# Step 2: Transform - dropna first (before filtering)
+employee_data_clean = []
 for row in employee_data:
     if (
-        str(row["Region"]).strip() != '' and
         str(row["Income"]).strip() != '' and
-        str(row["Employment_status"]).strip() != '' and
+        str(row["Employment_status"]).strip() != ''
+    ):
+        employee_data_clean.append(row)
+employee_data = employee_data_clean
+
+# Step 3: Transform - keep columns
+filters = ["Region", "Income", "Employment_status", "Age", "Pets"]
+filtered_employee_data = []
+for row in employee_data:
+    filtered_row = {k: row[k] for k in filters if k in row}
+    filtered_employee_data.append(filtered_row)
+employee_data = filtered_employee_data
+
+# Step 4: Transform - rename
+for _row in employee_data:
+    _row['Role'] = _row.pop('Employment_status')
+
+# Step 5: Transform - sort by Income descending
+employee_data.sort(key=lambda row: float(row["Income"]), reverse=True)
+
+# Step 6: Filter rows
+employee_data_filtered = []
+for row in employee_data:
+    if (
+        str(row["Region"]) in ["NL", "BE"] and
         float(row["Income"]) >= 20000 and
         int(row["Age"]) < 40
     ):
-        filtered_row = {
-            "Region": row["Region"],
-            "Income": row["Income"],
-            "Employment_status": row["Employment_status"],
-            "Age": row["Age"],
-            "Pets": row["Pets"]
-        }
-        cleaned_data.append(filtered_row)
+        employee_data_filtered.append(row)
+employee_data = employee_data_filtered
 
-# Step 3: Rename column
-for _row in cleaned_data:
-    _row['Role'] = _row.pop('Employment_status')
-
-# Step 4: Sort by Income descending
-cleaned_data.sort(key=lambda row: float(row["Income"]), reverse=True)
-
-# Step 5: Visualise as terminal table
-if cleaned_data:
-    _headers = list(cleaned_data[0].keys())
-    _rows = [list(row.values()) for row in cleaned_data]
+# Step 7: Visualise as terminal table
+if employee_data:
+    _headers = list(employee_data[0].keys())
+    _rows = [list(row.values()) for row in employee_data]
     print(tabulate(_rows, headers=_headers, tablefmt='grid'))
 else:
-    print('No data to display for cleaned_data.')
+    print('No data to display for employee_data.')
 
-# Step 6: GroupBy Region count
+# Step 8: GroupBy Region count
 _groups = {}
-for _row in cleaned_data:
+for _row in employee_data:
     _key = _row['Region']
     _groups[_key] = _groups.get(_key, 0) + 1
 print('GroupBy Region (count):')
 for _key in sorted(_groups.keys()):
     print(f'  {_key}: {_groups[_key]}')
 
-# Step 7: GroupBy Region avg Income
+# Step 9: GroupBy Region avg Income
 _groups = {}
 _counts = {}
-for _row in cleaned_data:
+for _row in employee_data:
     _key = _row['Region']
     _val = float(_row['Income'])
     _groups[_key] = _groups.get(_key, 0) + _val
@@ -66,10 +76,10 @@ print('GroupBy Region (avg Income):')
 for _key in sorted(_groups.keys()):
     print(f'  {_key}: {_groups[_key] / _counts[_key]}')
 
-# Step 8: Visualise as table image
-if cleaned_data:
-    _headers = list(cleaned_data[0].keys())
-    _rows = [list(row.values()) for row in cleaned_data]
+# Step 10: Visualise as table image
+if employee_data:
+    _headers = list(employee_data[0].keys())
+    _rows = [list(row.values()) for row in employee_data]
     _num_cols = len(_headers)
     _num_rows = len(_rows)
     _fig_width = max(8, _num_cols * 2.0)
@@ -95,10 +105,10 @@ if cleaned_data:
         else:
             cell.set_facecolor('#FFFFFF')
         cell.set_edgecolor('#BFBFBF')
-    plt.title('cleaned_data', fontsize=14, fontweight='bold', pad=20)
+    plt.title('employee_data', fontsize=14, fontweight='bold', pad=20)
     plt.tight_layout()
-    plt.savefig('cleaned_data_table_reference.png', dpi=150, bbox_inches='tight')
+    plt.savefig('employee_data_table_reference.png', dpi=150, bbox_inches='tight')
     plt.close()
-    print('Table image saved to cleaned_data_table_reference.png')
+    print('Table image saved to employee_data_table_reference.png')
 else:
-    print('No data to display for cleaned_data.')
+    print('No data to display for employee_data.')
