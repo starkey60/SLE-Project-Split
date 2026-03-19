@@ -101,7 +101,7 @@ str genTransformDataset(str source, list[ASTTransformation] transformations) {
 
     str keeps = genKeepTransformation(source, transformations);
 
-    return "<dropnasTransformation> <keeps> <renamesTransformation> <sortsTransformation>";
+    return "<dropnasTransformation> <renamesTransformation> <sortsTransformation> <keeps>";
 }
 
 str genRenameTransformation(str source, list[ASTTransformation] renames) {
@@ -158,13 +158,27 @@ for row in <source>:
 ";
 }
 
+list[str] genColOrder(list[ASTTransformation] ts) {
+    list[str] cols = [];
+    for (t <- ts) {
+        switch (t) {
+            case keep(c): cols += [c];
+            case rename(old, nw): {
+                if (old in cols) {
+                    int idx = indexOf(cols, old);
+                    cols = cols[0..idx] + [nw] + cols[idx+1..];
+                } else cols += [nw];
+            }
+            case sort(c, _, _): cols += [c];
+            case dropna(c): cols += [c];
+            default:;
+        }
+    }
+    return dup(cols);
+}
+
 str genRowsConstrain(list[ASTTransformation] transformations) {
-    list[str] values = dup(
-        [c | keep(c) <- transformations]
-        + [c | rename(c, _) <- transformations]
-        + [c | sort(c, _, _) <- transformations]
-        + [c | dropna(c) <- transformations]
-    );
+    list[str] values = genColOrder(transformations);
     return "[" + intercalate(", ", ["\"<c>\"" | c <- values]) + "]";
 }
 
@@ -337,7 +351,6 @@ for _key in sorted(_groups.keys()):
 // group source by aggregation (sum, avg, min, max)
 str genGroupByAgg(str source, str groupCol, ASTAggType aggType, str valueCol, ASTCast cast) {
     str typeFunc = genCastFunc(cast);
-    str aggName = getAggName(aggType);
 
     if (aggType == aggAvg()) {
         return genGroupByAvg(source, groupCol, valueCol, typeFunc);

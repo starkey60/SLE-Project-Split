@@ -5,6 +5,14 @@
 // inline comment
 Load "data.csv" as employee_data // inline comment
 
+Transform employee_data {
+    dropna "Income"
+    dropna "Employment_status"
+    keep "Age"
+    keep "Pets"
+    keep "Region"
+}
+
 Filter employee_data {
     "Income" (float) >= 20000
     "Age" (int) <= 40
