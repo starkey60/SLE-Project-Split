@@ -6,6 +6,13 @@
 Load "data.txt" as employee_data // inline comment
 Load "data.csv" as employee_data // inline comment
 
+Transform employee_data {
+    rename "Col" to "Col"
+    keep "other"
+    keep "Col"
+    rename "old" to "new"
+}
+
 Filter employee_dat {
     "Income" (float) >= "20000"
     "Age" (int) <= 40.555

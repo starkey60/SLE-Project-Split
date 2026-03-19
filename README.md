@@ -26,6 +26,10 @@ Warnings:
     * Importing a dataset under a name, that is already used for a different dataset. Leads to undefined behaviour
 * **W02**: Path \<path\> doesn't end with .csv
     * Providing a path, that does not end with a .csv. May still be a usable dictionary file.
+* **W03**: W03: Renaming to the same name as original
+    * Renaming to the same name as original can and should be omitted
+* **W04**: It is advised to group transformations on same columns together
+    * Keeping transformations grouped by targeted column helps keeping track of the resulting ordering
 
 Errors:
 * **E01**: Undefined dataset \<name\>

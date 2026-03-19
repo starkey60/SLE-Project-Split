@@ -68,7 +68,39 @@ rel[loc, Message] checkFilterCondition(FilterCondition cond) {
                     if ("<t>" != "<cast>") return {<cast.src, error("E05: Cast \'<cast>\' used on array of type \'<t>\'", cast.src)>};
             }
         }
-        default: return {};
+    }
+    return {};
+}
+
+rel[loc, Message] checkTransformation(Transformation t) {
+    switch (t) {
+        case (Transformation)`rename <String origName> to <String newName>`:
+            if("<origName>" == "<newName>")
+                return {<newName.src, warning("W03: Renaming to the same name as original", newName.src)>};
+    }
+    return{};
+}
+
+str getTransformationColumn(Transformation t) {
+    switch (t) {
+        case (Transformation)`keep <String c>`: return "<c>";
+        case (Transformation)`dropna <String c>`: return "<c>";
+        case (Transformation)`rename <String c> to <String _>`: return "<c>";
+        case (Transformation)`sort <String c> (<CastType _>) <SortOrder _>`: return "<c>";
+        default: return "";
+    }
+}
+
+rel[loc, Message] checkTransformationOrdering(list[Transformation] ts) {
+    set[str] closed = {};
+    str current = "";
+    for (t <- ts) {
+        str col = getTransformationColumn(t);
+        if(col != current) {
+            if (col in closed) return {<t.src, warning("W04: It is advised to group transformations on same columns together", t.src)>};
+            closed += {current};
+            current = col;
+        }
     }
     return {};
 }
@@ -95,6 +127,11 @@ Summary dslSummarizer(loc l, start[DSL] input) {
                 case (Element)`Filter <Identifier src> { <FilterCondition* conds> }`: {
                     msgs += checkRef("<src>", src.src, datasets);
                     for (c <- conds) msgs += checkFilterCondition(c);
+                }
+                case (Element)`Transform <Identifier src> { <Transformation* transformations> }`: {
+                    msgs += checkRef("<src>", src.src, datasets);
+                    for (t <- transformations) msgs += checkTransformation(t);
+                    msgs += checkTransformationOrdering([t | t <- transformations]);
                 }
                 default: msgs += {};
             }
