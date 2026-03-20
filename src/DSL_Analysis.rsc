@@ -5,6 +5,7 @@ import util::IDEServices;
 import util::Maybe;
 import ParseTree;
 import String;
+import IO;
 
 import DSL_Grammar;
 
@@ -109,6 +110,7 @@ rel[loc, Message] checkTransformationOrdering(list[Transformation] ts) {
 Summary dslSummarizer(loc l, start[DSL] input) {
     rel[loc, Message] msgs = {};
     map[str, loc] datasets = ();
+    rel[loc, loc] refs = {};
 
     if ((DSL)`<Element* elems>` := input.top) {
         for (Element e <- elems) {
@@ -116,34 +118,40 @@ Summary dslSummarizer(loc l, start[DSL] input) {
                 case (Element)`Load <String path> as <Identifier name>`: {
                     str n = "<name>";
                     msgs += checkDefine(n, name.src, datasets);
-                    datasets[n] = name.src;
-
+                    if (n notin datasets) datasets[n] = name.src;
                     msgs += checkPath(path);
                 }
                 case (Element)`Save <Identifier name> as <String path>`: {
                     msgs += checkRef("<name>", name.src, datasets);
                     msgs += checkPath(path);
+                    if ("<name>" in datasets) refs += <datasets["<name>"], name.src>;
                 }
-                case (Element)`Filter <Identifier src> { <FilterCondition* conds> }`: {
-                    msgs += checkRef("<src>", src.src, datasets);
+                case (Element)`Filter <Identifier name> { <FilterCondition* conds> }`: {
+                    msgs += checkRef("<name>", name.src, datasets);
+                    if ("<name>" in datasets) refs += <datasets["<name>"], name.src>;
                     for (c <- conds) msgs += checkFilterCondition(c);
                 }
-                case (Element)`Transform <Identifier src> { <Transformation* transformations> }`: {
-                    msgs += checkRef("<src>", src.src, datasets);
+                case (Element)`Transform <Identifier name> { <Transformation* transformations> }`: {
+                    msgs += checkRef("<name>", name.src, datasets);
+                    if ("<name>" in datasets) refs += <datasets["<name>"], name.src>;
                     for (t <- transformations) msgs += checkTransformation(t);
                     msgs += checkTransformationOrdering([t | t <- transformations]);
                 }
                 case (Element)`Visualise <Identifier name>`: {
                     msgs += checkRef("<name>", name.src, datasets);
+                    if ("<name>" in datasets) refs += <datasets["<name>"], name.src>;
                 }
                 case (Element)`Visualise <Identifier name> using <VisType _>`: {
                     msgs += checkRef("<name>", name.src, datasets);
+                    if ("<name>" in datasets) refs += <datasets["<name>"], name.src>;
                 }
                 case (Element)`GroupBy <Identifier name> by <String _> count`: {
                     msgs += checkRef("<name>", name.src, datasets);
+                    if ("<name>" in datasets) refs += <datasets["<name>"], name.src>;
                 }
                 case (Element)`GroupBy <Identifier name> by <String _> <AggType _> <String _> (<CastType cast>)`: {
                     msgs += checkRef("<name>", name.src, datasets);
+                    if ("<name>" in datasets) refs += <datasets["<name>"], name.src>;
                     if (!isNumericCast(cast)) msgs += {<cast.src, error("E06: Agg groupings can only use numeric casts", cast.src)>};
                 }
                 default: msgs += {};
@@ -151,5 +159,5 @@ Summary dslSummarizer(loc l, start[DSL] input) {
         }
     }
 
-    return summary(l, messages = msgs);
+    return summary(l, messages = msgs, references = refs);
 }

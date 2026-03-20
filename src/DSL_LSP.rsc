@@ -14,7 +14,6 @@ set[LanguageService] dslServices() = {
     analysis(dslSummarizer,
         providesDocumentation = false,
         providesDefinitions = false,
-        providesReferences = false,
         providesImplementations = false)
 };
 
