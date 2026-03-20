@@ -22,4 +22,7 @@ Filter employee_dat {
     "Region" (string) in [20, 200]
 }
 
+Visualise employee_dat
+Visualise employee_dat using table
+
 Save employee_data as "save.csv" // inline comment

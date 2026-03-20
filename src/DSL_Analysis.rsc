@@ -133,6 +133,12 @@ Summary dslSummarizer(loc l, start[DSL] input) {
                     for (t <- transformations) msgs += checkTransformation(t);
                     msgs += checkTransformationOrdering([t | t <- transformations]);
                 }
+                case (Element)`Visualise <Identifier name>`: {
+                    msgs += checkRef("<name>", name.src, datasets);
+                }
+                case (Element)`Visualise <Identifier name> using <VisType _>`: {
+                    msgs += checkRef("<name>", name.src, datasets);
+                }
                 default: msgs += {};
             }
         }
