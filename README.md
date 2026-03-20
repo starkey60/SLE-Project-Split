@@ -42,3 +42,5 @@ Errors:
     * Heterogeneous arrays are not supported
 * **E05**: Cast \<cast\> used on array of type \<type\>
     * Type mismatch
+* **E06**: Agg groupings can only use numeric casts
+    * Incorect cast when using GroupBy with an Agg (should be (int) or (float))

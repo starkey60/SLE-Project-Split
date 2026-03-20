@@ -139,6 +139,13 @@ Summary dslSummarizer(loc l, start[DSL] input) {
                 case (Element)`Visualise <Identifier name> using <VisType _>`: {
                     msgs += checkRef("<name>", name.src, datasets);
                 }
+                case (Element)`GroupBy <Identifier name> by <String _> count`: {
+                    msgs += checkRef("<name>", name.src, datasets);
+                }
+                case (Element)`GroupBy <Identifier name> by <String _> <AggType _> <String _> (<CastType cast>)`: {
+                    msgs += checkRef("<name>", name.src, datasets);
+                    if (!isNumericCast(cast)) msgs += {<cast.src, error("E06: Agg groupings can only use numeric casts", cast.src)>};
+                }
                 default: msgs += {};
             }
         }
