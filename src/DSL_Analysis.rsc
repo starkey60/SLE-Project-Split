@@ -78,6 +78,9 @@ rel[loc, Message] checkTransformation(Transformation t) {
         case (Transformation)`rename <String origName> to <String newName>`:
             if("<origName>" == "<newName>")
                 return {<newName.src, warning("W03: Renaming to the same name as original", newName.src)>};
+        case (Transformation)`sort <String col> (<CastType cast>) <SortOrder _>`:
+            if(!isNumericCast(cast))
+                return {<cast.src, error("E07: Sort requires numeric cast (int or float), got \'<cast>\' on <col>", cast.src)>};    
     }
     return{};
 }
@@ -104,6 +107,20 @@ rel[loc, Message] checkTransformationOrdering(list[Transformation] ts) {
         }
     }
     return {};
+}
+
+rel[loc, Message] checkDuplicateKeeps(list[Transformation] ts) {
+    rel[loc, Message] msgs = {};
+    set[str] seen = {};
+    for (t <- ts) {
+        if ((Transformation)`keep <String col>` := t) {
+            if ("<col>" in seen) {
+                msgs += {<col.src, warning("W05: Duplicate keep for column <col>", col.src)>};
+            }
+            seen += {"<col>"};
+        }
+    }
+    return msgs;
 }
 
 // CST matching, to keep loc (otherwise would have to add it to AST)
@@ -136,6 +153,7 @@ Summary dslSummarizer(loc l, start[DSL] input) {
                     if ("<name>" in datasets) refs += <datasets["<name>"], name.src>;
                     for (t <- transformations) msgs += checkTransformation(t);
                     msgs += checkTransformationOrdering([t | t <- transformations]);
+                    msgs += checkDuplicateKeeps([t | t <- transformations]);
                 }
                 case (Element)`Visualise <Identifier name>`: {
                     msgs += checkRef("<name>", name.src, datasets);
