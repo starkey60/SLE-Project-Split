@@ -4,7 +4,6 @@ import DSL_AST;
 import DSL_Transformation;
 import String;
 import List;
-import util::Maybe;
 
 str generate(ASTProgram program) {
     str code = "import csv\n\n";
@@ -13,12 +12,9 @@ str generate(ASTProgram program) {
 
     for (cmd <- program.commands) {
         if (cmd is visualise) {
-            needsTabulate = true;
-        }
-        if (cmd is visualiseUsing) {
-            str vt = cmd.vizType;
-            if (vt == "table") needsTabulate = true;
-            if (vt == "table_image") needsMatplotlib = true;
+            if (cmd.vis == defaultVis()) needsTabulate = true;
+            if (cmd.vis == table()) needsTabulate = true;
+            if (cmd.vis == tableImage()) needsMatplotlib = true;
         }
     }
 
@@ -40,26 +36,17 @@ str generate(ASTProgram program) {
 
 str genCommand(ASTCommand command) {
     switch (command) {
-        case load(path, name): {
-            return genLoad(path, name);
+        case io(path, name, io): {
+            return genIO(path, name, io);
         }
-        case constrain(source, target, conditions): {
-            return genConstrain(source, target, conditions);
+        case filterDataset(source, filters): {
+            return genFilterDataset(source, filters);
         }
-        case visualise(name): {
-            return genVisualise(name, "default");
+        case transformDataset(source, transformations): {
+            return genTransformDataset(source, transformations);
         }
-        case visualiseUsing(name, vizType): {
-            return genVisualise(name, vizType);            
-        }
-        case rename(source, oldCol, newCol): {
-            return genRename(source, oldCol, newCol);
-        }
-        case sortAsc(source, col, t): {
-            return genSort(source, col, t, false);
-        }
-        case sortDesc(source, col, t): {
-            return genSort(source, col, t, true);
+        case visualise(name, vis): {
+            return genVisualise(name, vis);
         }
         case groupByCount(source, groupCol): {
             return genGroupByCount(source, groupCol);
@@ -68,6 +55,14 @@ str genCommand(ASTCommand command) {
             return genGroupByAgg(source, groupCol, aggType, valueCol, valType);
         }
         default: throw "Unknown command when generating code";
+    }
+}
+
+str genIO(str path, str name, ASTIO io) {
+    switch (io) {
+        case load(): return genLoad(path, name);
+        case save(): return genSave(path, name);
+        default: throw "Unknown io while running codegen <io>";
     }
 }
 
@@ -81,30 +76,145 @@ with open(\"<path>\", newline=\"\") as f:
 ";
 }
 
-str genConstrain(str source, str target, list[ASTCondition] conditions) {
-    str rows = genRowsConstrain(conditions);
-    list[str] condList = [s | just(s) <- [genCondition(c) | c <- conditions]];
-    str conds = intercalate(
-        " and\n",
-        ["      " + cond | cond <- condList]
-    );
+str genSave(str path, str name) {
+    return "
+with open(\"<path>\", \"w\", newline=\"\") as f:
+    if <name>:
+        fields = <name>[0].keys()
+        writer = csv.DictWriter(f, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(<name>)
+";
+}
+
+//transform the genFilterDataset
+str genTransformDataset(str source, list[ASTTransformation] transformations) {
+    // separate different transformations
+    list[ASTTransformation] renames = [t | t: rename(_, _) <- transformations];
+    str renamesTransformation = isEmpty(renames) ? "" : genRenameTransformation(source, renames);
+
+    list[ASTTransformation] sorts = [t | t: sort(_, _, _) <- transformations];
+    str sortsTransformation = isEmpty(sorts) ? "" : genSortTransformation(source, sorts);
+
+    list[ASTTransformation] dropnas = [t | t: dropna(_) <- transformations];
+    str dropnasTransformation = isEmpty(dropnas) ? "" : genDropnaTransformation(source, dropnas);
+
+    str keeps = genKeepTransformation(source, transformations);
+
+    return "<dropnasTransformation> <renamesTransformation> <sortsTransformation> <keeps>";
+}
+
+str genRenameTransformation(str source, list[ASTTransformation] renames) {
+    str code = "";
+    for (r <- renames) {
+        if (r is rename) {
+            code += genRename(source, r.column, r.newName);
+        }
+    }
+    return code;
+}
+
+str genSortTransformation(str source, list[ASTTransformation] sorts) {
+    str code = "";
+    for (s <- sorts) {
+        if (s is sort) {
+            code += genSort(source, s.column, s.cast, s.sort);
+        }
+    }
+    return code;
+}
+
+str genDropnaTransformation(str source, list[ASTTransformation] dropnas) {
+    list[str] checks = [];
+    for (d <- dropnas) {
+        if (d is dropna) {
+            checks += "str(row[\'<d.column>\']).strip() != \'\'";
+        }
+    }
+    str conds = intercalate(" and\n      ", checks);
+    return
+"
+<source>_clean = []
+for row in <source>:
+    if (
+      <conds>
+    ):
+        <source>_clean.append(row)
+<source> = <source>_clean
+";
+}
+
+str genKeepTransformation(str source, list[ASTTransformation] transformations) {
+    // extract columns that the transformed dataset will contain 
+    str colsToKeep = genRowsConstrain(transformations);
 
     return "
-<target>_filters = <rows>
-<target> = []
+filters = <colsToKeep>    
+filtered_<source> = []
+for row in <source>:
+    filtered_row = {k: row[k] for k in filters if k in row}
+    filtered_<source>.append(filtered_row)
+<source> = filtered_<source>
+";
+}
+
+list[str] genColOrder(list[ASTTransformation] ts) {
+    list[str] cols = [];
+    for (t <- ts) {
+        switch (t) {
+            case keep(c): cols += [c];
+            case rename(old, nw): {
+                if (old in cols) {
+                    int idx = indexOf(cols, old);
+                    cols = cols[0..idx] + [nw] + cols[idx+1..];
+                } else cols += [nw];
+            }
+            case sort(c, _, _): cols += [c];
+            case dropna(c): cols += [c];
+            default:;
+        }
+    }
+    return dup(cols);
+}
+
+str genRowsConstrain(list[ASTTransformation] transformations) {
+    list[str] values = genColOrder(transformations);
+    return "[" + intercalate(", ", ["\"<c>\"" | c <- values]) + "]";
+}
+
+// just filters loaded columns, no ordering or keeping constrains
+str genFilterDataset(str source, list[ASTFilter] filters) {
+    list[str] filtList = [genFilter(f) | f <- filters];
+    str conds = intercalate( " and\n", ["      " + f | f <- filtList] );
+
+    return "
+<source>_filtered = []
 for row in <source>:
     if (
 <conds>
     ):
-        filtered_row = {col:row[col] for col in <target>_filters}
-        <target>.append(filtered_row)
+        <source>_filtered.append(row)
+<source> = <source>_filtered
 ";
 }
 
-// placeholder "default" for when user does not specify type. Feel free to change
-str genVisualise(str dataName, str vizType) {
-    if (vizType == "table_image") return genVisualiseTableImage(dataName);
-    return genVisualiseTable(dataName);
+str genFilter(ASTFilter f) {
+    switch(f) {
+        case inList(col, valList, cast):
+            return "<genCast(col, cast)> in <genList(valList)>";
+        case equality(col, val, eq, cast):
+            return "<genCast(col, cast)> <genEqualityOperator(eq)> <genValue(val)>";
+        default: throw "Unknown Condition";
+    }
+}
+
+str genVisualise(str dataName, ASTVis vis) {
+    switch (vis) {
+        case defaultVis(): return genVisualiseTable(dataName);
+        case table(): return genVisualiseTable(dataName);
+        case tableImage(): return genVisualiseTableImage(dataName);
+        default: throw "Unknown vis type during codegen <vis>";
+    }
 }
 
 str genVisualiseTable(str dataName) {
@@ -164,28 +274,6 @@ else:
 ";
 }
 
-Maybe[str] genCondition(ASTCondition c) {
-    switch(c) {
-        case inList(col, t, values):
-            return just("<genTypedAccess(col, t)> in <genList(values)>");
-        case greaterEq(col, t, v):
-            return just("<genTypedAccess(col, t)> \>= <genValue(v)>");
-        case greater(col, t, v):
-            return just("<genTypedAccess(col, t)> \> <genValue(v)>");
-        case lessEq(col, t, v):
-            return just("<genTypedAccess(col, t)> \<= <genValue(v)>");
-        case less(col, t, v):
-            return just("<genTypedAccess(col, t)> \< <genValue(v)>");
-        case equals(col, t, v):
-            return just("<genTypedAccess(col, t)> == <genValue(v)>");
-        case dropna(col, t):
-            return just("str(row[\"<col>\"]).strip() != \'\'");
-        case keep(_, _):
-            return nothing(); 
-        default: throw "Unknown Condition";
-    }
-}
-
 str genValue(ASTValue v) {
     switch(v) {
         case intVal(i): return "<i>";
@@ -201,37 +289,30 @@ str genList(list[ASTValue] values) {
     return "[" + intercalate(", ", [ genValue(v) | v <- values]) + "]";
 }
 
-str genTypedAccess(str col, ASTType t) {
-    switch(t) {
-        case intType():
+str genCast(str col, ASTCast cast) {
+    switch(cast) {
+        case intCast():
             return "int(row[\"<col>\"])";
-        case floatType():
+        case floatCast():
             return "float(row[\"<col>\"])";
-        case stringType():
-            return "row[\"<col>\"]";
-        case boolType():
-            return "row[\"<col>\"] == \"true\"";
+        case stringCast():
+            return "str(row[\"<col>\"])";
+        case boolCast():
+            return "bool(row[\"<col>\"])";
         default: throw "Unknown Typed Access";
     }
 }
 
-str getColumn(ASTCondition cond) {
-    switch (cond) {
-        case inList(col, _, _): return col;
-        case greaterEq(col, _, _): return col;
-        case greater(col, _, _): return col;
-        case lessEq(col, _, _): return col;
-        case less(col, _, _): return col;
-        case equals(col, _, _): return col;
-        case keep(col, _): return col;
-        case dropna(col, _): return col;
-        default: throw "Unknown condition";
+str genEqualityOperator(ASTEquality eq) {
+    switch (eq) {
+        case greaterEq(): return "\>=";
+        case greater(): return "\>";
+        case lessEq(): return "\<=";
+        case less(): return "\<";
+        case equals(): return "==";
+        case notEquals(): return "!=";
+        default: throw "Unknown equality operator";
     }
-}
-
-str genRowsConstrain(list[ASTCondition] conditions) {
-    list[str] values = [getColumn(c) | c <- conditions];
-    return "[" + intercalate(", ", ["\"<c>\"" | c <- values]) + "]";
 }
 
 // rename oldCol to newCol in source
@@ -244,9 +325,9 @@ for _row in <source>:
 }
 
 // sort source by col of type t, descending if specified
-str genSort(str source, str col, ASTType t, bool descending) {
-    str access = genTypedAccess(col, t);
-    str rev = descending ? "True" : "False";
+str genSort(str source, str col, ASTCast cast, ASTSort sortOrder) {
+    str access = genCast(col, cast);
+    str rev = (sortOrder == descending()) ? "True" : "False";
     return
 "
 <source>.sort(key=lambda row: <access>, reverse=<rev>)
@@ -268,9 +349,8 @@ for _key in sorted(_groups.keys()):
 }
 
 // group source by aggregation (sum, avg, min, max)
-str genGroupByAgg(str source, str groupCol, ASTAggType aggType, str valueCol, ASTType valType) {
-    str typeFunc = genTypeFunc(valType);
-    str aggName = getAggName(aggType);
+str genGroupByAgg(str source, str groupCol, ASTAggType aggType, str valueCol, ASTCast cast) {
+    str typeFunc = genCastFunc(cast);
 
     if (aggType == aggAvg()) {
         return genGroupByAvg(source, groupCol, valueCol, typeFunc);
@@ -281,7 +361,6 @@ str genGroupByAgg(str source, str groupCol, ASTAggType aggType, str valueCol, AS
     if (aggType == aggMax()) {
         return genGroupByMinMax(source, groupCol, valueCol, typeFunc, "max", "\>");
     }
-    // default: sum
     return genGroupBySum(source, groupCol, valueCol, typeFunc);
 }
 
@@ -333,14 +412,14 @@ for _key in sorted(_groups.keys()):
 ";
 }
 
-// helper: get just the Python type function name
-str genTypeFunc(ASTType t) {
-    switch(t) {
-        case intType(): return "int";
-        case floatType(): return "float";
-        case stringType(): return "str";
-        case boolType(): return "bool";
-        default: throw "Unknown type for aggregation";
+// helper: get the full expression
+str genCastFunc(ASTCast cast) {
+    switch(cast) {
+        case intCast(): return "int";
+        case floatCast(): return "float";
+        case stringCast(): return "str";
+        case boolCast(): return "bool";
+        default: throw "Unknown cast type";
     }
 }
 

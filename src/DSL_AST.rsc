@@ -4,33 +4,56 @@ data ASTProgram
   = program(list[ASTCommand] commands);
 
 data ASTCommand
-  = load(str path, str name)
-  | constrain(str source, str target, list[ASTCondition] conditions)
-  | visualise(str name)
-  | visualiseUsing(str name, str vizType)
-  | rename(str source, str oldCol, str newCol)
-  | sortAsc(str source, str col, ASTType t)
-  | sortDesc(str source, str col, ASTType t)
+  = io(str path, str name, ASTIO io)
+  | filterDataset(str source, list[ASTFilter] filters)
+  | transformDataset(str source, list[ASTTransformation] transformations)
+  | visualise(str name, ASTVis vis)
   | groupByCount(str source, str groupCol)
-  | groupByAgg(str source, str groupCol, ASTAggType aggType, str valueCol, ASTType valType)
+  | groupByAgg(str source, str groupCol, ASTAggType aggType, str valueCol, ASTCast cast)
   ;
 
-data ASTCondition
-  = inList(str column, ASTType t, list[ASTValue] values)
-  | greaterEq(str column, ASTType t, ASTValue v)
-  | greater(str column, ASTType t, ASTValue v)
-  | lessEq(str column, ASTType t, ASTValue v)
-  | less(str column, ASTType t, ASTValue v)
-  | equals(str column, ASTType t, ASTValue v)
-  | keep(str column, ASTType t)
-  | dropna(str column, ASTType t)
+data ASTFilter
+  = inList(str column, list[ASTValue] values, ASTCast cast)
+  | equality(str column, ASTValue val, ASTEquality eq, ASTCast cast)
   ;
 
-data ASTType
-  = intType()
-  | floatType()
-  | stringType()
-  | boolType()
+data ASTTransformation
+  = rename(str column, str newName)
+  | sort(str column, ASTSort sort, ASTCast cast)
+  | dropna(str column)
+  | keep(str column)
+  ;
+
+data ASTCast
+  = boolCast()
+  | stringCast()
+  | intCast()
+  | floatCast()
+  ;
+
+data ASTIO 
+  = load()
+  | save()
+  ;
+
+data ASTVis
+  = defaultVis()
+  | table()
+  | tableImage()
+  ;
+
+data ASTSort
+  = ascending()
+  | descending()
+  ;
+
+data ASTEquality
+  = greaterEq()
+  | greater()
+  | lessEq()
+  | less()
+  | equals()
+  | notEquals()
   ;
 
 data ASTValue
