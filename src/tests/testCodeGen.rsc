@@ -55,7 +55,6 @@ test bool testGenRename() {
 }
 
 // genSort
-
 test bool testGenSortAscending() {
     str result = genSort("data", "age", intCast(), ascending());
     return contains(result, "reverse=False") && contains(result, "int(row[\"age\"])");
@@ -86,6 +85,9 @@ test bool testColOrderKeep() =
     genColOrder([dropna("c"), keep("a"), keep("b"), keep("c")]) == ["c", "a", "b"];
 
 test bool testColOrderRename() =
+    genColOrder([keep("p"), keep("r"), keep("i"), dropna("p"), dropna("i"), dropna("r"), rename("p", "a")]) == ["a", "r", "i"];
+    
+test bool testColOrderRenameComplex() =
     genColOrder([keep("a"), rename("a", "x"), keep("a"), keep("c")]) == ["x", "c"];
 
 test bool testColOrderNoDuplicates() =
@@ -121,4 +123,82 @@ test bool testGroupByMax() {
     str result = genGroupByAgg("sales", "cat", aggMax(), "price", intCast());
     return contains(result, "GroupBy cat (max price)")
         && contains(result, "\>");
+}
+
+// genFilterDataset
+test bool testFilterDatasetSingleCondition() {
+    str result = genFilterDataset("data", [equality("age", intVal(18), greaterEq(), intCast())]);
+    return contains(result, "data_filtered = []")
+        && contains(result, "for row in data")
+        && contains(result, "int(row[\"age\"]) \>= 18")
+        && contains(result, "data_filtered.append(row)")
+        && contains(result, "data = data_filtered");
+}
+
+test bool testFilterDatasetMultipleConditions() {
+    str result = genFilterDataset("data", [
+        equality("age", intVal(18), greaterEq(), intCast()),
+        inList("country", [stringVal("NL"), stringVal("DE")], stringCast())
+    ]);
+    return contains(result, "int(row[\"age\"]) \>= 18")
+        && contains(result, "str(row[\"country\"]) in [\"NL\", \"DE\"]");
+}
+
+test bool testFilterDatasetEmptyFilters() {
+    str result = genFilterDataset("data", []);
+    return result == "";
+}
+
+// genTransformDataset
+test bool testTransformDatasetRenameOnly() {
+    str result = genTransformDataset("data", [keep("a"), rename("a", "b")]);
+    return contains(result, "_row[\'b\'] = _row.pop(\'a\')")
+        && contains(result, "filters = [\"b\"]");
+}
+
+test bool testTransformDatasetSortOnly() {
+    str result = genTransformDataset("data", [keep("age"), sort("age", ascending(), intCast())]);
+    return contains(result, "data.sort(key=lambda row: int(row[\"age\"])")
+        && contains(result, "reverse=False");
+}
+
+test bool testTransformDatasetDropnaOnly() {
+    str result = genTransformDataset("data", [keep("name"), dropna("name")]);
+    return contains(result, "data_clean = []")
+        && contains(result, "str(row[\'name\']).strip() != \'\'")
+        && contains(result, "data = data_clean");
+}
+
+test bool testTransformDatasetCombined() {
+    str result = genTransformDataset("data", [
+        keep("name"),
+        keep("age"),
+        dropna("name"),
+        rename("age", "years"),
+        sort("years", descending(), intCast())
+    ]);
+    return contains(result, "data_clean = []")
+        && contains(result, "_row[\'years\'] = _row.pop(\'age\')")
+        && contains(result, "reverse=True")
+        && contains(result, "filters = [\"name\", \"years\"]");
+}
+
+// genVisualiseTable
+test bool testVisualiseTable() {
+    str result = genVisualiseTable("myData");
+    return contains(result, "if myData:")
+        && contains(result, "_headers = list(myData[0].keys())")
+        && contains(result, "_rows = [list(row.values()) for row in myData]")
+        && contains(result, "print(tabulate(_rows, headers=_headers")
+        && contains(result, "No data to display for myData.");
+}
+
+// genVisualiseTableImage
+test bool testVisualiseTableImage() {
+    str result = genVisualiseTableImage("myData");
+    return contains(result, "if myData:")
+        && contains(result, "_headers = list(myData[0].keys())")
+        && contains(result, "plt.savefig(\'myData_table.png\'")
+        && contains(result, "Table image saved to myData_table.png")
+        && contains(result, "No data to display for myData.");
 }

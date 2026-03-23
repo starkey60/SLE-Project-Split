@@ -168,7 +168,8 @@ list[str] genColOrder(list[ASTTransformation] ts) {
                 renamed += {old};
                 if (old in cols) {
                     int idx = indexOf(cols, old);
-                    cols = cols[0..idx] + [nw] + cols[idx+1..];
+                    cols = [c | c <- cols, c != old];
+                    cols = cols[0..idx] + [nw] + cols[idx..];
                 } else cols += [nw];
             }
             case sort(c, _, _): if (c notin renamed) cols += [c];
@@ -186,6 +187,7 @@ str genRowsConstrain(list[ASTTransformation] transformations) {
 
 // just filters loaded columns, no ordering or keeping constrains
 str genFilterDataset(str source, list[ASTFilter] filters) {
+    if (isEmpty(filters)) return "";
     list[str] filtList = [genFilter(f) | f <- filters];
     str conds = intercalate( " and\n", ["      " + f | f <- filtList] );
 
