@@ -18,3 +18,11 @@ LSP status:
 2. import DSL_LSP;
 3. run register();
 This should result in errors showing when a .dsl file cant be parsed in vscode itself. However, no concrete error messages are shown, nor syntax is highlighted.
+
+## Unit tests
+
+1. open a rascal terminal;
+2. import tests::runner;
+3. run :test;
+
+To add new tests, add a testX.rsc where X is the module being tested. To add the new tests to the main runner, add `extend extend tests::testX;` to runner.rsc.
