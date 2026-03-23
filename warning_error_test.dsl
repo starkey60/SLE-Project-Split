@@ -30,5 +30,7 @@ Visualise employee_dat using table
 GroupBy employees by "Region" count
 GroupBy employee by "Region" avg "Income" (string)
 
+GroupBy employee_data by "Region" count
+
 Save employee_dataas as "save.cssv" // inline comment
 Save employee_data as "something.csv" // find ref for employee_data declaration should poinnnt to this and transform

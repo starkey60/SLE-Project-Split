@@ -11,10 +11,7 @@ import DSL_Analysis;
 
 set[LanguageService] dslServices() = {
     parsing(parser(#start[DSL])),
-    analysis(dslSummarizer,
-        providesDocumentation = false,
-        providesDefinitions = false,
-        providesImplementations = false)
+    analysis(dslSummarizer, providesImplementations = false)
 };
 
 Language DSL = language(

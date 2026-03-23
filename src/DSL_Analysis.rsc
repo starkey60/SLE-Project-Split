@@ -126,9 +126,20 @@ rel[loc, Message] checkDuplicateKeeps(list[Transformation] ts) {
 
 // CST matching, to keep loc (otherwise would have to add it to AST)
 Summary dslSummarizer(loc l, start[DSL] input) {
-    rel[loc, Message] msgs = {};
-    map[str, loc] datasets = ();
-    rel[loc, loc] refs = {};
+    rel[loc, Message] msgs = {}; // warnings and errors
+    map[str, loc] datasets = (); // loaded datasets
+    rel[loc, loc] refs = {}; // references
+    rel[loc, loc] defs = {}; // definitions
+    rel[loc, str] hovs = {}; // hover documentation
+
+    void registerRef(Identifier name) {
+        msgs += checkRef("<name>", name.src, datasets);
+        if ("<name>" in datasets) {
+            refs += <datasets["<name>"], name.src>;
+            defs += <name.src, datasets["<name>"]>;
+            hovs += <name.src, "Reference to dataset **<name>**">;
+        }
+    }
 
     if ((DSL)`<Element* elems>` := input.top) {
         for (Element e <- elems) {
@@ -138,45 +149,48 @@ Summary dslSummarizer(loc l, start[DSL] input) {
                     msgs += checkDefine(n, name.src, datasets);
                     if (n notin datasets) datasets[n] = name.src;
                     msgs += checkPath(path);
+
+                    hovs += <e.src, "Load a CSV file from `<path>` and bind it to dataset **<name>**">;
                 }
                 case (Element)`Save <Identifier name> as <String path>`: {
-                    msgs += checkRef("<name>", name.src, datasets);
-                    msgs += checkPath(path);
-                    if ("<name>" in datasets) refs += <datasets["<name>"], name.src>;
+                    registerRef(name);
+                    hovs += <e.src, "Save dataset **<name>** to a CSV file `<path>`">;
                 }
                 case (Element)`Filter <Identifier name> { <FilterCondition* conds> }`: {
-                    msgs += checkRef("<name>", name.src, datasets);
-                    if ("<name>" in datasets) refs += <datasets["<name>"], name.src>;
+                    registerRef(name);
                     for (c <- conds) msgs += checkFilterCondition(c);
+                    hovs += <e.src, "Apply filter conditions to dataset **<name>**">;
                 }
                 case (Element)`Transform <Identifier name> { <Transformation* transformations> }`: {
-                    msgs += checkRef("<name>", name.src, datasets);
-                    if ("<name>" in datasets) refs += <datasets["<name>"], name.src>;
+                    registerRef(name);
                     for (t <- transformations) msgs += checkTransformation(t);
                     msgs += checkTransformationOrdering([t | t <- transformations]);
                     msgs += checkDuplicateKeeps([t | t <- transformations]);
+
+                    hovs += <e.src, "Apply transformation conditions to dataset **<name>**">;
                 }
                 case (Element)`Visualise <Identifier name>`: {
-                    msgs += checkRef("<name>", name.src, datasets);
-                    if ("<name>" in datasets) refs += <datasets["<name>"], name.src>;
+                    registerRef(name);
+
+                    hovs += <e.src, "Print a table visualisation of the dataset **<name>**">;
                 }
-                case (Element)`Visualise <Identifier name> using <VisType _>`: {
-                    msgs += checkRef("<name>", name.src, datasets);
-                    if ("<name>" in datasets) refs += <datasets["<name>"], name.src>;
+                case (Element)`Visualise <Identifier name> using <VisType vis>`: {
+                    registerRef(name);
+                    hovs += <e.src, "Make a visualisation of the dataset **<name>** using visType `<vis>`">;
                 }
-                case (Element)`GroupBy <Identifier name> by <String _> count`: {
-                    msgs += checkRef("<name>", name.src, datasets);
-                    if ("<name>" in datasets) refs += <datasets["<name>"], name.src>;
+                case (Element)`GroupBy <Identifier name> by <String c> count`: {
+                    registerRef(name);
+                    hovs += <e.src, "Apply a groupBy transformation to **<name>** on column <c>">;
                 }
-                case (Element)`GroupBy <Identifier name> by <String _> <AggType _> <String _> (<CastType cast>)`: {
-                    msgs += checkRef("<name>", name.src, datasets);
-                    if ("<name>" in datasets) refs += <datasets["<name>"], name.src>;
+                case (Element)`GroupBy <Identifier name> by <String c> <AggType agg> <String v> (<CastType cast>)`: {
+                    registerRef(name);
                     if (!isNumericCast(cast)) msgs += {<cast.src, error("E06: Agg groupings can only use numeric casts", cast.src)>};
+                    hovs += <e.src, "Group dataset **<name>** by `<c>`, computing <agg> of `<v>` (cast to <cast>)">;
                 }
                 default: msgs += {};
             }
         }
     }
 
-    return summary(l, messages = msgs, references = refs);
+    return summary(l, messages = msgs, references = refs, definitions = defs, hovers = hovs);
 }
