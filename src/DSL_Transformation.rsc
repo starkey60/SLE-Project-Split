@@ -110,6 +110,7 @@ ASTVis toAST(VisType t) {
     switch (t) {
         case (VisType) `table`: return table();
         case (VisType) `table_image`: return tableImage();
+        case (VisType) `pie_chart`: return pieChart();
         default: throw "unknown visualisation type <t>";
     }
 }
