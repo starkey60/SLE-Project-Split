@@ -1,4 +1,4 @@
-module tests::test_grammar_parsing
+module tests::testGrammarParsing
 
 import DSL_Grammar;
 import ParseTree;

@@ -160,17 +160,19 @@ for row in <source>:
 
 list[str] genColOrder(list[ASTTransformation] ts) {
     list[str] cols = [];
+    set[str] renamed = {};
     for (t <- ts) {
         switch (t) {
-            case keep(c): cols += [c];
+            case keep(c): if (c notin renamed) cols += [c];
             case rename(old, nw): {
+                renamed += {old};
                 if (old in cols) {
                     int idx = indexOf(cols, old);
                     cols = cols[0..idx] + [nw] + cols[idx+1..];
                 } else cols += [nw];
             }
-            case sort(c, _, _): cols += [c];
-            case dropna(c): cols += [c];
+            case sort(c, _, _): if (c notin renamed) cols += [c];
+            case dropna(c): if (c notin renamed) cols += [c];
             default:;
         }
     }
