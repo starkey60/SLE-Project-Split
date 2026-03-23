@@ -154,6 +154,7 @@ Summary dslSummarizer(loc l, start[DSL] input) {
                 }
                 case (Element)`Save <Identifier name> as <String path>`: {
                     registerRef(name);
+                    msgs += checkPath(path);
                     hovs += <e.src, "Save dataset **<name>** to a CSV file `<path>`">;
                 }
                 case (Element)`Filter <Identifier name> { <FilterCondition* conds> }`: {

@@ -160,17 +160,20 @@ for row in <source>:
 
 list[str] genColOrder(list[ASTTransformation] ts) {
     list[str] cols = [];
+    set[str] renamed = {};
     for (t <- ts) {
         switch (t) {
-            case keep(c): cols += [c];
+            case keep(c): if (c notin renamed) cols += [c];
             case rename(old, nw): {
+                renamed += {old};
                 if (old in cols) {
                     int idx = indexOf(cols, old);
-                    cols = cols[0..idx] + [nw] + cols[idx+1..];
+                    cols = [c | c <- cols, c != old];
+                    cols = cols[0..idx] + [nw] + cols[idx..];
                 } else cols += [nw];
             }
-            case sort(c, _, _): cols += [c];
-            case dropna(c): cols += [c];
+            case sort(c, _, _): if (c notin renamed) cols += [c];
+            case dropna(c): if (c notin renamed) cols += [c];
             default:;
         }
     }
@@ -184,6 +187,7 @@ str genRowsConstrain(list[ASTTransformation] transformations) {
 
 // just filters loaded columns, no ordering or keeping constrains
 str genFilterDataset(str source, list[ASTFilter] filters) {
+    if (isEmpty(filters)) return "";
     list[str] filtList = [genFilter(f) | f <- filters];
     str conds = intercalate( " and\n", ["      " + f | f <- filtList] );
 
@@ -298,7 +302,7 @@ str genCast(str col, ASTCast cast) {
         case stringCast():
             return "str(row[\"<col>\"])";
         case boolCast():
-            return "bool(row[\"<col>\"])";
+            return "(row[\"<col>\"].strip().lower() == \"true\")";
         default: throw "Unknown Typed Access";
     }
 }

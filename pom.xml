@@ -58,6 +58,7 @@
           <bin>${project.build.outputDirectory}</bin>
           <srcs>
             <src>${project.basedir}/src</src>
+            <src>${project.basedir}/src/tests</src>
           </srcs>
         </configuration>
       </plugin>
