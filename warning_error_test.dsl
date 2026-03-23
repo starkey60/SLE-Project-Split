@@ -8,9 +8,11 @@ Load "data.csv" as employee_data // inline comment
 
 Transform employee_data {
     rename "Col" to "Col"
+    keep "Col"
     keep "other"
     keep "Col"
     rename "old" to "new"
+    sort "Income" (bool) descending
 }
 
 Filter employee_dat {

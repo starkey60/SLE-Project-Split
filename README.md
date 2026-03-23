@@ -30,6 +30,8 @@ Warnings:
     * Renaming to the same name as original can and should be omitted
 * **W04**: It is advised to group transformations on same columns together
     * Keeping transformations grouped by targeted column helps keeping track of the resulting ordering
+* **W05**: Redundant keep for column \<col\>
+    * Redundant operation, \<col\> will be kept without this operation
 
 Errors:
 * **E01**: Undefined dataset \<name\>
@@ -44,3 +46,5 @@ Errors:
     * Type mismatch
 * **E06**: Agg groupings can only use numeric casts
     * Incorect cast when using GroupBy with an Agg (should be (int) or (float))
+* **E07**: E07: Sort requires numeric cast (int or float), got \<cast\> on \<col\>
+    * Incorrect cast on sort

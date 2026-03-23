@@ -113,12 +113,13 @@ rel[loc, Message] checkDuplicateKeeps(list[Transformation] ts) {
     rel[loc, Message] msgs = {};
     set[str] seen = {};
     for (t <- ts) {
+        str colName = getTransformationColumn(t);
         if ((Transformation)`keep <String col>` := t) {
             if ("<col>" in seen) {
-                msgs += {<col.src, warning("W05: Duplicate keep for column <col>", col.src)>};
+                msgs += {<t.src, warning("W05: Redundant keep for column <col>", t.src)>};
             }
-            seen += {"<col>"};
         }
+        seen += {"<colName>"}; // check for any transformation, since its redundant to use keep if we do any other transformation on Col
     }
     return msgs;
 }
