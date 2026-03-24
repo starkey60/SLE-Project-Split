@@ -1,0 +1,36 @@
+/*
+    This test should contain all possible LSP Errors and Warnings
+*/
+
+// inline comment
+Load "data.txt" as employee_data // inline comment
+Load "data.csv" as employee_data // inline comment
+
+Transform employee_data {
+    rename "Col" to "Col"
+    keep "Col"
+    keep "other"
+    keep "Col"
+    rename "old" to "new"
+    sort "Income" (bool) descending
+}
+
+Filter employee_dat {
+    "Income" (float) >= "20000"
+    "Age" (int) <= 40.555
+    "Pets" (bool) == false
+    "Employment status" (string) >= "employee"
+    "Region" (string) in [20, "200"]
+    "Region" (string) in [20, 200]
+}
+
+Visualise employee_daa
+Visualise employee_dat using table
+
+GroupBy employees by "Region" count
+GroupBy employee by "Region" avg "Income" (string)
+
+GroupBy employee_data by "Region" count
+
+Save employee_dataas as "save.cssv" // inline comment
+Save employee_data as "something.csv" // find ref for employee_data declaration should poinnnt to this and transform

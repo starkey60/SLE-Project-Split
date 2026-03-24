@@ -21,7 +21,7 @@ test bool testGenListMultiple() = genList([intVal(4), intVal(0), intVal(4)]) == 
 test bool testIntCast() = genCast("age age", intCast()) == "int(row[\"age age\"])";
 test bool testFloatCast() = genCast("price", floatCast()) == "float(row[\"price\"])";
 test bool testStringCast() = genCast("name", stringCast()) == "str(row[\"name\"])";
-test bool testBoolCast() = genCast("active", boolCast()) == "bool(row[\"active\"])";
+test bool testBoolCast() = genCast("active", boolCast()) == "(row[\"active\"].strip().lower() == \"true\")";
 
 // genCastFunc
 test bool testCastFuncInt() = genCastFunc(intCast()) == "int";
