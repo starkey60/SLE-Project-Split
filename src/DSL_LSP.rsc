@@ -2,19 +2,20 @@ module DSL_LSP
 
 import util::LanguageServer;
 import util::IDEServices;
-import ParseTree;
 import util::Reflective;
-import IO;
+import String;
+import ParseTree;
 
 import DSL_Grammar;
-import DSL_Parsing;
+import DSL_Analysis;
 
 set[LanguageService] dslServices() = {
-    parsing(parser(#start[DSL]))
+    parsing(parser(#start[DSL])),
+    analysis(dslSummarizer, providesImplementations = false)
 };
 
 Language DSL = language(
-    pathConfig(srcs=[|project://SLE-Project/src|]),
+    pathConfig(srcs=[|project://SLE-Project-Split/src|]),
     "DSL",
     {"dsl"},
     "DSL_LSP",
@@ -23,10 +24,8 @@ Language DSL = language(
 
 void register() {
     registerLanguage(DSL);
-    println("registered");
 }
 
 void deregister() {
     unregisterLanguage(DSL);
-    println("deregistered");
 }
