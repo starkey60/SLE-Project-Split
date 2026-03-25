@@ -125,6 +125,16 @@ test bool testVisualiseUsingTableImage() {
     return true;
 }
 
+test bool testVisualiseUsingPieChart() {
+    parse(#Element, "Visualise my_data using pie_chart");
+    return true;
+}
+
+test bool testVisualiseUsingBarChart() {
+    parse(#Element, "Visualise my_data using bar_chart");
+    return true;
+}
+
 test bool testInvalidVisualise() {
     try {
         parse(#Element, "Visualise my_data using random");

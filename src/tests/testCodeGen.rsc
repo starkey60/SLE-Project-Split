@@ -202,3 +202,24 @@ test bool testVisualiseTableImage() {
         && contains(result, "Table image saved to myData_table.png")
         && contains(result, "No data to display for myData.");
 }
+
+// genVisualisePieChart
+test bool testVisualisePieChart() {
+    str result = genVisualisePieChart("myData");
+    return contains(result, "if myData:")
+        && contains(result, "_labelCol = _keys[0]")
+        && contains(result, "_valueCol = _keys[1]")
+        && contains(result, "plt.savefig(\'myData_pie.png\'")
+        && contains(result, "Pie chart saved to myData_pie.png");
+}
+
+// genVisualiseBarChart
+test bool testVisualiseBarChart() {
+    str result = genVisualiseBarChart("myData");
+    return contains(result, "if myData:")
+        && contains(result, "_labelCol = _keys[0]")
+        && contains(result, "_valueCol = _keys[1]")
+        && contains(result, "_ax.bar(_labels, _values")
+        && contains(result, "plt.savefig(\'myData_bar.png\'")
+        && contains(result, "Bar chart saved to myData_bar.png");
+}
