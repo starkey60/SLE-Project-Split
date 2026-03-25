@@ -41,6 +41,7 @@ data ASTVis
   | table()
   | tableImage()
   | pieChart()
+  | barChart()
   ;
 
 data ASTSort
