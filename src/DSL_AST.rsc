@@ -40,6 +40,7 @@ data ASTVis
   = defaultVis()
   | table()
   | tableImage()
+  | pieChart()
   ;
 
 data ASTSort

@@ -14,7 +14,7 @@ str generate(ASTProgram program) {
         if (cmd is visualise) {
             if (cmd.vis == defaultVis()) needsTabulate = true;
             if (cmd.vis == table()) needsTabulate = true;
-            if (cmd.vis == tableImage()) needsMatplotlib = true;
+            if (cmd.vis == tableImage() || cmd.vis == pieChart()) needsMatplotlib = true;
         }
     }
 
@@ -217,8 +217,37 @@ str genVisualise(str dataName, ASTVis vis) {
         case defaultVis(): return genVisualiseTable(dataName);
         case table(): return genVisualiseTable(dataName);
         case tableImage(): return genVisualiseTableImage(dataName);
+        case pieChart(): return genVisualisePieChart(dataName);
         default: throw "Unknown vis type during codegen <vis>";
     }
+}
+
+// we infer label and value columns from the ordering of columns (documentation)
+str genVisualisePieChart(str dataName) {
+    return 
+"
+if <dataName>:
+    _keys = list(<dataName>[0].keys())
+    _labelCol = _keys[0]
+    _valueCol = _keys[1]
+    _labels = [row[_labelCol] for row in <dataName>]
+    _values = [float(row[_valueCol]) for row in <dataName>]
+    _fig, _ax = plt.subplots()
+    _ax.pie(
+        _values,
+        labels=_labels,
+        autopct=\'%1.1f%%\',
+        startangle=140
+    )
+    _ax.axis(\'equal\')
+    plt.title(\'<dataName>\', fontsize=14, fontweight=\'bold\')
+    plt.tight_layout()
+    plt.savefig(\'<dataName>_pie.png\', dpi=150, bbox_inches=\'tight\')
+    plt.close()
+    print(\'Pie chart saved to <dataName>_pie.png\')
+else:
+    print(\'No data to display for <dataName>.\')
+";
 }
 
 str genVisualiseTable(str dataName) {
@@ -346,6 +375,7 @@ _groups = {}
 for _row in <source>:
     _key = _row[\'<groupCol>\']
     _groups[_key] = _groups.get(_key, 0) + 1
+<source> = [{\'<groupCol>\': _key, \'count\': _count} for _key, _count in sorted(_groups.items())]
 print(\'GroupBy <groupCol> (count):\')
 for _key in sorted(_groups.keys()):
     print(f\'  {_key}: {_groups[_key]}\')
@@ -377,6 +407,7 @@ for _row in <source>:
     _key = _row[\'<groupCol>\']
     _val = <typeFunc>(_row[\'<valueCol>\'])
     _groups[_key] = _groups.get(_key, 0) + _val
+<source> = [{\'<groupCol>\': _key, \'<valueCol>\': _val} for _key, _val in sorted(_groups.items())]
 print(\'GroupBy <groupCol> (sum <valueCol>):\')
 for _key in sorted(_groups.keys()):
     print(f\'  {_key}: {_groups[_key]}\')
@@ -394,6 +425,7 @@ for _row in <source>:
     _val = <typeFunc>(_row[\'<valueCol>\'])
     _groups[_key] = _groups.get(_key, 0) + _val
     _counts[_key] = _counts.get(_key, 0) + 1
+<source> = [{\'<groupCol>\': _key, \'<valueCol>\': _groups[_key] / _counts[_key]} for _key in sorted(_groups.keys())]
 print(\'GroupBy <groupCol> (avg <valueCol>):\')
 for _key in sorted(_groups.keys()):
     print(f\'  {_key}: {_groups[_key] / _counts[_key]}\')
@@ -410,6 +442,7 @@ for _row in <source>:
     _val = <typeFunc>(_row[\'<valueCol>\'])
     if _key not in _groups or _val <op> _groups[_key]:
         _groups[_key] = _val
+<source> = [{\'<groupCol>\': _key, \'<valueCol>\': _val} for _key, _val in sorted(_groups.items())]
 print(\'GroupBy <groupCol> (<aggName> <valueCol>):\')
 for _key in sorted(_groups.keys()):
     print(f\'  {_key}: {_groups[_key]}\')

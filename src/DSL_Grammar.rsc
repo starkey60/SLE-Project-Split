@@ -47,6 +47,7 @@ syntax SortOrder
 syntax VisType
   = visTable: "table"
   | visTableImage: "table_image"
+  | pieChart: "pie_chart"
   ;
 
 syntax CastType
