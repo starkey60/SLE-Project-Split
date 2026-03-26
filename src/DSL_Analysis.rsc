@@ -161,14 +161,14 @@ Summary dslSummarizer(loc l, start[DSL] input) {
                 case (Element)`Filter <Identifier name> { <FilterCondition* conds> }`: {
                     registerRef(name);
                     if ("<name>" in groupedDatasets)
-                        msgs += {<name.src, warning("W06: Filtering dataset \'<name>\' after a GroupBy may fail - GroupBy replaces columns", name.src)>};
+                        msgs += {<name.src, warning("W06: Using dataset \'<name>\' after a GroupBy may fail - GroupBy replaces columns", name.src)>};
                     for (c <- conds) msgs += checkFilterCondition(c);
                     hovs += <e.src, "Apply filter conditions to dataset **<name>**">;
                 }
                 case (Element)`Transform <Identifier name> { <Transformation* transformations> }`: {
                     registerRef(name);
                     if ("<name>" in groupedDatasets)
-                        msgs += {<name.src, warning("W07: Transforming dataset \'<name>\' after a GroupBy may fail - GroupBy replaces columns", name.src)>};
+                        msgs += {<name.src, warning("W06: Using dataset \'<name>\' after a GroupBy may fail - GroupBy replaces columns", name.src)>};
                     for (t <- transformations) msgs += checkTransformation(t);
                     msgs += checkTransformationOrdering([t | t <- transformations]);
                     msgs += checkDuplicateKeeps([t | t <- transformations]);
