@@ -128,6 +128,7 @@ rel[loc, Message] checkDuplicateKeeps(list[Transformation] ts) {
 Summary dslSummarizer(loc l, start[DSL] input) {
     rel[loc, Message] msgs = {}; // warnings and errors
     map[str, loc] datasets = (); // loaded datasets
+    set[str] groupedDatasets = {}; // tracks datasets that have been through a GroupBy
     rel[loc, loc] refs = {}; // references
     rel[loc, loc] defs = {}; // definitions
     rel[loc, str] hovs = {}; // hover documentation
@@ -159,11 +160,15 @@ Summary dslSummarizer(loc l, start[DSL] input) {
                 }
                 case (Element)`Filter <Identifier name> { <FilterCondition* conds> }`: {
                     registerRef(name);
+                    if ("<name>" in groupedDatasets)
+                        msgs += {<name.src, warning("W06: Using dataset \'<name>\' after a GroupBy may fail - GroupBy replaces columns", name.src)>};
                     for (c <- conds) msgs += checkFilterCondition(c);
                     hovs += <e.src, "Apply filter conditions to dataset **<name>**">;
                 }
                 case (Element)`Transform <Identifier name> { <Transformation* transformations> }`: {
                     registerRef(name);
+                    if ("<name>" in groupedDatasets)
+                        msgs += {<name.src, warning("W06: Using dataset \'<name>\' after a GroupBy may fail - GroupBy replaces columns", name.src)>};
                     for (t <- transformations) msgs += checkTransformation(t);
                     msgs += checkTransformationOrdering([t | t <- transformations]);
                     msgs += checkDuplicateKeeps([t | t <- transformations]);
@@ -181,10 +186,12 @@ Summary dslSummarizer(loc l, start[DSL] input) {
                 }
                 case (Element)`GroupBy <Identifier name> by <String c> count`: {
                     registerRef(name);
+                    groupedDatasets += {"<name>"};
                     hovs += <e.src, "Apply a groupBy transformation to **<name>** on column <c>">;
                 }
                 case (Element)`GroupBy <Identifier name> by <String c> <AggType agg> <String v> (<CastType cast>)`: {
                     registerRef(name);
+                    groupedDatasets += {"<name>"};
                     if (!isNumericCast(cast)) msgs += {<cast.src, error("E06: Agg groupings can only use numeric casts", cast.src)>};
                     hovs += <e.src, "Group dataset **<name>** by `<c>`, computing <agg> of `<v>` (cast to <cast>)">;
                 }

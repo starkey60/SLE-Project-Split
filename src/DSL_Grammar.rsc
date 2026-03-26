@@ -48,6 +48,7 @@ syntax VisType
   = visTable: "table"
   | visTableImage: "table_image"
   | pieChart: "pie_chart"
+  | barChart: "bar_chart"
   ;
 
 syntax CastType

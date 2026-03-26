@@ -14,7 +14,7 @@ str generate(ASTProgram program) {
         if (cmd is visualise) {
             if (cmd.vis == defaultVis()) needsTabulate = true;
             if (cmd.vis == table()) needsTabulate = true;
-            if (cmd.vis == tableImage() || cmd.vis == pieChart()) needsMatplotlib = true;
+            if (cmd.vis != defaultVis() && cmd.vis != table()) needsMatplotlib = true;
         }
     }
 
@@ -218,6 +218,7 @@ str genVisualise(str dataName, ASTVis vis) {
         case table(): return genVisualiseTable(dataName);
         case tableImage(): return genVisualiseTableImage(dataName);
         case pieChart(): return genVisualisePieChart(dataName);
+        case barChart(): return genVisualiseBarChart(dataName);
         default: throw "Unknown vis type during codegen <vis>";
     }
 }
@@ -245,6 +246,36 @@ if <dataName>:
     plt.savefig(\'<dataName>_pie.png\', dpi=150, bbox_inches=\'tight\')
     plt.close()
     print(\'Pie chart saved to <dataName>_pie.png\')
+else:
+    print(\'No data to display for <dataName>.\')
+";
+}
+
+// bar-chart visualisation : first col x-axis labels, second col y-axis values
+// requires a GroupBy before it to set up the label/value columns; same as pie_chart
+str genVisualiseBarChart(str dataName) {
+    return
+"
+if <dataName>:
+    _keys = list(<dataName>[0].keys())
+    _labelCol = _keys[0]
+    _valueCol = _keys[1]
+    _labels = [row[_labelCol] for row in <dataName>]
+    _values = [float(row[_valueCol]) for row in <dataName>]
+    _fig, _ax = plt.subplots(figsize=(max(8, len(_labels) * 1.5), 6))
+    _bars = _ax.bar(_labels, _values, color=\'#4472C4\', edgecolor=\'#2F5597\')
+    for _bar, _val in zip(_bars, _values):
+        _ax.text(_bar.get_x() + _bar.get_width() / 2, _bar.get_height() + 0.3,
+                 str(_val), ha=\'center\', va=\'bottom\', fontweight=\'bold\')
+    _ax.set_xlabel(_labelCol, fontsize=12)
+    _ax.set_ylabel(_valueCol, fontsize=12)
+    _ax.set_title(\'<dataName>\', fontsize=14, fontweight=\'bold\')
+    _ax.spines[\'top\'].set_visible(False)
+    _ax.spines[\'right\'].set_visible(False)
+    plt.tight_layout()
+    plt.savefig(\'<dataName>_bar.png\', dpi=150, bbox_inches=\'tight\')
+    plt.close()
+    print(\'Bar chart saved to <dataName>_bar.png\')
 else:
     print(\'No data to display for <dataName>.\')
 ";
