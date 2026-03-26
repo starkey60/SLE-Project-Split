@@ -14,7 +14,7 @@ str generate(ASTProgram program) {
         if (cmd is visualise) {
             if (cmd.vis == defaultVis()) needsTabulate = true;
             if (cmd.vis == table()) needsTabulate = true;
-            if (cmd.vis == tableImage() || cmd.vis == pieChart() || cmd.vis == barChart()) needsMatplotlib = true;
+            if (cmd.vis != defaultVis() && cmd.vis != table()) needsMatplotlib = true;
         }
     }
 
