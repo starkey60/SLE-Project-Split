@@ -1,0 +1,33 @@
+Load "global_ecommerce_sales.csv" as na_sales
+
+Transform na_sales {
+    keep "Product_Name"
+    dropna "Customer_Segment"
+    dropna "Region"
+    dropna "Product_Category"
+    dropna "Quantity"
+}
+
+Filter na_sales {
+    "Customer_Segment" (string) != "Corporate"
+    "Region" (string) in ["North America", "Asia Pacific"]
+    "Product_Category" (string) == "Technology"
+    "Quantity" (int) >= 2
+}
+
+GroupBy na_sales by "Product_Name" sum "Quantity" (int)
+Visualise na_sales using pie_chart 
+
+Load "global_ecommerce_sales.csv" as uae_customers
+
+Transform uae_customers {
+    keep "Customer_Name"
+    sort "Profit" (float) descending
+    keep "Country"
+}
+
+Filter uae_customers {
+    "Country" (string) == "UAE"
+}
+
+Visualise uae_customers using table_image
