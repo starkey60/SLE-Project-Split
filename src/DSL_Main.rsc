@@ -31,7 +31,7 @@ void main(loc file) {
 
     // Step 3: Code generation
     str output = generate(cmd);
-    str baseName = file.file[0..-4];
+    str baseName = file.file[0..-6];
     loc outFile = file.parent + "<baseName>.py";
     writeFile(outFile, output);
 
