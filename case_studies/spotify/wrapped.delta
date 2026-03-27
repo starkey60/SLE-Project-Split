@@ -1,0 +1,16 @@
+Load "spotify_alltime_top100_songs.csv" as data
+
+Transform data{
+    rename "total_streams_billions" to "streams"
+    keep "artist"
+    keep "artist_country"
+}
+
+Filter data{
+    "artist_country" (string) == "UK"
+}
+
+GroupBy data by "artist" sum "streams" (float)
+
+Visualise data using bar_chart
+Visualise data using pie_chart
