@@ -1,15 +1,15 @@
 # Software Language Engineering project DSL
 
 Runinng the pipeline:
-0. write your dsl file (or use one of the provided test files)
-1. open a rascal terminal in VS Code (Ctrl+Shift+P -> "Rascal: Create Rascal Terminal");
-2. import DSL_Main;
-3. call main() with the rascal path of the test file. get them by right clicking on the file using vscode file explorer.
-4. the generated output will be a python file under the same name and directory as the input file
-5. any warnings will be shown in the command line
-6. any errors will lead to the python file not being generated
-7. install Python dependencies from `python_sources/requirements.txt` (idealy in a venv)
-8. run the python script
+1. write your dsl file (or use one of the provided test files)
+2. open a rascal terminal in VS Code (Ctrl+Shift+P -> "Rascal: Create Rascal Terminal");
+3. import DSL_Main;
+4. call main() with the rascal path of the test file. get them by right clicking on the file using vscode file explorer.
+5. the generated output will be a python file under the same name and directory as the input file
+6. any warnings will be shown in the command line
+7. any errors will lead to the python file not being generated
+8. install Python dependencies from `python_sources/requirements.txt` (idealy in a venv)
+9. run the python script
 
 ## Runtime
 1. Python is required (TODO version requirements?)
