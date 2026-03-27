@@ -41,6 +41,8 @@ Warnings:
     * It is advised to group transformations targeting the same column to improve readability and maintain ordering clarity
 * **W05**: Redundant keep for column \<col\>
     * Redundant operation, \<col\> will be kept without this operation
+* **W06**: Using dataset \'<name>\' after a GroupBy may fail - GroupBy replaces columns
+    * GroupBy is a side effectful feature that modifies the dataset in place
 
 Errors:
 * **E01**: Undefined dataset \<name\>
