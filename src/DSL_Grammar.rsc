@@ -1,6 +1,6 @@
 module DSL_Grammar
 
-start syntax DSL
+start syntax DELTA
   = element: Element*;
 
 // top-level commands

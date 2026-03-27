@@ -7,9 +7,9 @@ import ParseTree;
 import IO;
 
 // top level progam
-ASTProgram toAST(start[DSL] dsl) {
+ASTProgram toAST(start[DELTA] dsl) {
     switch (dsl) {
-        case (start[DSL])`<Element* elements>`:
+        case (start[DELTA])`<Element* elements>`:
             return program([ toAST(el) | el <- elements ]);
             
         default: throw "Top level error";

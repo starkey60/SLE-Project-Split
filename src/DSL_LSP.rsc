@@ -10,22 +10,22 @@ import DSL_Grammar;
 import DSL_Analysis;
 
 set[LanguageService] dslServices() = {
-    parsing(parser(#start[DSL])),
+    parsing(parser(#start[DELTA])),
     analysis(dslSummarizer, providesImplementations = false)
 };
 
-Language DSL = language(
+Language DELTA = language(
     pathConfig(srcs=[|project://SLE-Project-Split/src|]),
-    "DSL",
-    {"dsl"},
+    "DELTA",
+    {"delta"},
     "DSL_LSP",
     "dslServices"
 );
 
 void register() {
-    registerLanguage(DSL);
+    registerLanguage(DELTA);
 }
 
 void deregister() {
-    unregisterLanguage(DSL);
+    unregisterLanguage(DELTA);
 }

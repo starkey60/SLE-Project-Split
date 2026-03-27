@@ -11,6 +11,12 @@ Runinng the pipeline:
 7. install Python dependencies from `python_sources/requirements.txt` (idealy in a venv)
 8. run the python script
 
+## Runtime
+1. Python is required (TODO version requirements?)
+2. to install required libraries make a venv: (`python3 -m venv .venv`)
+3. Activate venv: `source path-to-venv/bin/activate`
+4. Install requiremnts.txt: `pip install -r requirements.txt`
+
 ## Language Server
 LSP status:
 1. open a rascal terminal;

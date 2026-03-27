@@ -4,13 +4,13 @@ import DSL_Grammar;
 import ParseTree;
 import IO;
 
-start[DSL] parseJSON(str input) {
-  return parse(#start[DSL], input);
+start[DELTA] parseJSON(str input) {
+  return parse(#start[DELTA], input);
 }
 
-start[DSL] parseFromFile(loc file) {
+start[DELTA] parseFromFile(loc file) {
   str contents = readFile(file);
-  return parse(#start[DSL], contents);
+  return parse(#start[DELTA], contents);
 }
 
 

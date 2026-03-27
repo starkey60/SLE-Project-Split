@@ -15,7 +15,7 @@ void main(loc file) {
     println("Processing file: <file>");
 
     // Step 1: Parsing
-    start[DSL] tree = parse(#start[DSL], file);
+    start[DELTA] tree = parse(#start[DELTA], file);
 
     // Step 2: Analysis
     Summary s = dslSummarizer(file, tree);

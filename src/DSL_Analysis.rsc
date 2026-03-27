@@ -125,7 +125,7 @@ rel[loc, Message] checkDuplicateKeeps(list[Transformation] ts) {
 }
 
 // CST matching, to keep loc (otherwise would have to add it to AST)
-Summary dslSummarizer(loc l, start[DSL] input) {
+Summary dslSummarizer(loc l, start[DELTA] input) {
     rel[loc, Message] msgs = {}; // warnings and errors
     map[str, loc] datasets = (); // loaded datasets
     set[str] groupedDatasets = {}; // tracks datasets that have been through a GroupBy
@@ -142,7 +142,7 @@ Summary dslSummarizer(loc l, start[DSL] input) {
         }
     }
 
-    if ((DSL)`<Element* elems>` := input.top) {
+    if ((DELTA)`<Element* elems>` := input.top) {
         for (Element e <- elems) {
             switch (e) {
                 case (Element)`Load <String path> as <Identifier name>`: {
