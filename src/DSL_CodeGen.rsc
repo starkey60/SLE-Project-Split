@@ -1,75 +1,50 @@
 module DSL_CodeGen
 
-import DSL_AST;
-import DSL_Transformation;
+import DSL_Grammar;
 import String;
 import List;
 
-str generate(ASTProgram program) {
+str generate(start[DELTA] dlt) {
     str code = "import csv\n\n";
-    bool needsTabulate = false;
-    bool needsMatplotlib = false;
-
-    for (cmd <- program.commands) {
-        if (cmd is visualise) {
-            if (cmd.vis == defaultVis()) needsTabulate = true;
-            if (cmd.vis == table()) needsTabulate = true;
-            if (cmd.vis != defaultVis() && cmd.vis != table()) needsMatplotlib = true;
-        }
+    code += "from tabulate import tabulate\n";
+    code += "import matplotlib\n";
+    code += "matplotlib.use(\'Agg\')\n";
+    code += "import matplotlib.pyplot as plt\n\n";
+    
+    switch (dlt) {
+        case (start[DELTA])`<Element* elements>`:
+            return code += intercalate("\n", [genElement(el) | Element el <- elements]);
+        default: return code;
     }
-
-    if (needsTabulate) code += "from tabulate import tabulate\n";
-    if (needsMatplotlib) {
-        code += "import matplotlib\n";
-        code += "matplotlib.use(\'Agg\')\n";
-        code += "import matplotlib.pyplot as plt\n";
-    }
-
-    code += "\n";
-
-    for (cmd <- program.commands) {
-        code += genCommand(cmd);
-    }
-
-    return code;
 }
 
-str genCommand(ASTCommand command) {
-    switch (command) {
-        case io(path, name, io): {
-            return genIO(path, name, io);
-        }
-        case filterDataset(source, filters): {
-            return genFilterDataset(source, filters);
-        }
-        case transformDataset(source, transformations): {
-            return genTransformDataset(source, transformations);
-        }
-        case visualise(name, vis): {
-            return genVisualise(name, vis);
-        }
-        case groupByCount(source, groupCol): {
-            return genGroupByCount(source, groupCol);
-        }
-        case groupByAgg(source, groupCol, aggType, valueCol, valType): {
-            return genGroupByAgg(source, groupCol, aggType, valueCol, valType);
-        }
+str genElement(Element el) {
+    switch (el) {
+        case (Element)`Load <String path> as <Identifier id>`:
+            return genLoad("<path>", "<id>");
+        case (Element)`Save <Identifier id> as <String path>`:
+            return genSave("<path>", "<id>");
+        case (Element)`Filter <Identifier id> { <FilterCondition* conds> }`:
+            return genFilter("<id>", [genFilterCondition(f) | f <- conds]);
+        case (Element)`Transform <Identifier id> { <Transformation* transformations> }`:
+            return genTransform("<id>", [t | t <- transformations]);
+        case (Element)`Visualise <Identifier target>`:
+            return genVisualiseTable("<target>");
+        case (Element)`Visualise <Identifier target> using <VisType template>`:
+            return genVisualise("<target>", template);
+        case (Element)`GroupBy <Identifier src> by <String col> count`:
+            return genGroupByAggGeneralised("<src>", "<col>", "\'count\'",
+                "_groups[_key] = _groups.get(_key, 0) + 1");
+        case (Element)`GroupBy <Identifier src> by <String col> <AggType agg> <String valCol> (<CastType t>)`:
+            return genGroupByAgg("<src>", "<col>", agg, "<valCol>", t);
         default: throw "Unknown command when generating code";
-    }
-}
-
-str genIO(str path, str name, ASTIO io) {
-    switch (io) {
-        case load(): return genLoad(path, name);
-        case save(): return genSave(path, name);
-        default: throw "Unknown io while running codegen <io>";
     }
 }
 
 str genLoad(str path, str name) {
     return "
 <name> = []
-with open(\"<path>\", newline=\"\") as f:
+with open(<path>, newline=\"\") as f:
     reader = csv.DictReader(f)
     for row in reader:
         <name>.append(row)
@@ -78,7 +53,7 @@ with open(\"<path>\", newline=\"\") as f:
 
 str genSave(str path, str name) {
     return "
-with open(\"<path>\", \"w\", newline=\"\") as f:
+with open(<path>, \"w\", newline=\"\") as f:
     if <name>:
         fields = <name>[0].keys()
         writer = csv.DictWriter(f, fieldnames=fields)
@@ -87,109 +62,9 @@ with open(\"<path>\", \"w\", newline=\"\") as f:
 ";
 }
 
-//transform the genFilterDataset
-str genTransformDataset(str source, list[ASTTransformation] transformations) {
-    // separate different transformations
-    list[ASTTransformation] renames = [t | t: rename(_, _) <- transformations];
-    str renamesTransformation = isEmpty(renames) ? "" : genRenameTransformation(source, renames);
-
-    list[ASTTransformation] sorts = [t | t: sort(_, _, _) <- transformations];
-    str sortsTransformation = isEmpty(sorts) ? "" : genSortTransformation(source, sorts);
-
-    list[ASTTransformation] dropnas = [t | t: dropna(_) <- transformations];
-    str dropnasTransformation = isEmpty(dropnas) ? "" : genDropnaTransformation(source, dropnas);
-
-    str keeps = genKeepTransformation(source, transformations);
-
-    return "<dropnasTransformation> <renamesTransformation> <sortsTransformation> <keeps>";
-}
-
-str genRenameTransformation(str source, list[ASTTransformation] renames) {
-    str code = "";
-    for (r <- renames) {
-        if (r is rename) {
-            code += genRename(source, r.column, r.newName);
-        }
-    }
-    return code;
-}
-
-str genSortTransformation(str source, list[ASTTransformation] sorts) {
-    str code = "";
-    for (s <- sorts) {
-        if (s is sort) {
-            code += genSort(source, s.column, s.cast, s.sort);
-        }
-    }
-    return code;
-}
-
-str genDropnaTransformation(str source, list[ASTTransformation] dropnas) {
-    list[str] checks = [];
-    for (d <- dropnas) {
-        if (d is dropna) {
-            checks += "str(row[\'<d.column>\']).strip() != \'\'";
-        }
-    }
-    str conds = intercalate(" and\n      ", checks);
-    return
-"
-<source>_clean = []
-for row in <source>:
-    if (
-      <conds>
-    ):
-        <source>_clean.append(row)
-<source> = <source>_clean
-";
-}
-
-str genKeepTransformation(str source, list[ASTTransformation] transformations) {
-    // extract columns that the transformed dataset will contain 
-    str colsToKeep = genRowsConstrain(transformations);
-
-    return "
-filters = <colsToKeep>    
-filtered_<source> = []
-for row in <source>:
-    filtered_row = {k: row[k] for k in filters if k in row}
-    filtered_<source>.append(filtered_row)
-<source> = filtered_<source>
-";
-}
-
-list[str] genColOrder(list[ASTTransformation] ts) {
-    list[str] cols = [];
-    set[str] renamed = {};
-    for (t <- ts) {
-        switch (t) {
-            case keep(c): if (c notin renamed) cols += [c];
-            case rename(old, nw): {
-                renamed += {old};
-                if (old in cols) {
-                    int idx = indexOf(cols, old);
-                    cols = [c | c <- cols, c != old];
-                    cols = cols[0..idx] + [nw] + cols[idx..];
-                } else cols += [nw];
-            }
-            case sort(c, _, _): if (c notin renamed) cols += [c];
-            case dropna(c): if (c notin renamed) cols += [c];
-            default:;
-        }
-    }
-    return dup(cols);
-}
-
-str genRowsConstrain(list[ASTTransformation] transformations) {
-    list[str] values = genColOrder(transformations);
-    return "[" + intercalate(", ", ["\"<c>\"" | c <- values]) + "]";
-}
-
-// just filters loaded columns, no ordering or keeping constrains
-str genFilterDataset(str source, list[ASTFilter] filters) {
+str genFilter(str source, list[str] filters) {
     if (isEmpty(filters)) return "";
-    list[str] filtList = [genFilter(f) | f <- filters];
-    str conds = intercalate( " and\n", ["      " + f | f <- filtList] );
+    str conds = intercalate( " and\n", ["      " + f | f <- filters] );
 
     return "
 <source>_filtered = []
@@ -202,107 +77,165 @@ for row in <source>:
 ";
 }
 
-str genFilter(ASTFilter f) {
-    switch(f) {
-        case inList(col, valList, cast):
-            return "<genCast(col, cast)> in <genList(valList)>";
-        case equality(col, val, eq, cast):
-            return "<genCast(col, cast)> <genEqualityOperator(eq)> <genValue(val)>";
-        default: throw "Unknown Condition";
+str genFilterCondition(FilterCondition f) {
+    switch (f) {
+        case (FilterCondition)`<String col> (<CastType t>) in [<{Value ","}* vals>]`: {
+            return "<genCast("<col>", t)> in <genList([v | v <- vals])>";
+        }
+        case (FilterCondition)`<String col> (<CastType t>) <EqualityOp op> <Value v>`:
+            return "<genCast("<col>", t)> <genEqualityOperator(op)> <genValue(v)>";
+        default: throw "unknown filter condition <f>";
     }
 }
 
-str genVisualise(str dataName, ASTVis vis) {
+str genValue(Value v) {
+    switch (v) {
+        case (Value)`<String s>`:
+            return "<s>";
+        case (Value)`<Boolean b>`:
+            return ("<b>" == "true") ? "True" : "False";
+        case (Value)`<Number n>`: {
+            str raw = "<n>";
+            return contains(raw, ".")
+                ? "<toReal(raw)>"
+                : "<toInt(raw)>";
+        }
+        case (Value)`[<{Value ","}* vals>]`:
+            return genList([val | val <- vals]);
+        default: throw "Could not transform value <v>";
+    }
+}
+
+str genList(list[Value] values) {
+    return "[" + intercalate(", ", [ genValue(v) | v <- values]) + "]";
+}
+
+str genCast(str col, CastType cast) {
+    switch (cast) {
+        case (CastType) `int`: return "int(row[<col>])";
+        case (CastType) `float`:  return "float(row[<col>])";
+        case (CastType) `string`: return "str(row[<col>])";
+        case (CastType) `bool`:  return "(row[<col>].strip().lower() == \"true\")";
+        default: throw "unknown cast type <cast>";
+    }
+}
+
+str genEqualityOperator(EqualityOp eq) = "<eq>";
+
+str genTransform(str source, list[Transformation] transformations) {
+    // separate different transformations
+    list[Transformation] renames = [t | t <- transformations, t is rename];
+    str renamesTransformations = isEmpty(renames) ? "" : genRenameTransformations(source, renames);
+
+    list[Transformation] sorts = [t | t <- transformations, t is sortBy];
+    str sortsTransformations = isEmpty(sorts) ? "" : genSortTransformations(source, sorts);
+
+    list[Transformation] dropnas = [t | t <- transformations, t is dropna];
+    str dropnasTransformations = isEmpty(dropnas) ? "" : genDropnaTransformations(source, dropnas);
+
+    str keeps = genKeepTransformation(source, transformations);
+
+    return "<dropnasTransformations> <renamesTransformations> <sortsTransformations> <keeps>";
+}
+
+str genDropnaTransformations(str source, list[Transformation] dropnas) {
+    list[str] checks = [];
+    for (dropna(col) <- dropnas) {
+        checks += "str(row[<col>]).strip() != \'\'";
+    }
+    str conds = intercalate(" and\n      ", checks);
+    return "
+<source>_clean = []
+for row in <source>:
+    if (
+      <conds>
+    ):
+        <source>_clean.append(row)
+<source> = <source>_clean
+";
+}
+
+str genRenameTransformations(str source, list[Transformation] renames) {
+    str code = "";
+    for (rename(old, new) <- renames) {
+        code +="
+for _row in <source>:
+    _row[<new>] = _row.pop(<old>)
+";
+    }
+    return code;
+}
+
+str genSortTransformations(str source, list[Transformation] sorts) {
+    str code = "";
+    for (sortBy(col, cast, order) <- sorts) {
+        str access = genCast("<col>", cast);
+        str rev = (order is descending) ? "True" : "False";
+        code += "
+<source>.sort(key=lambda row: <access>, reverse=<rev>)
+";
+    }
+    return code;
+}
+
+str genKeepTransformation(str source, list[Transformation] transformations) {
+    // extract columns that the transformed dataset will contain 
+    list[str] values = genColOrder(transformations);
+    str colsToKeep =  "[" + intercalate(", ", ["\"<c>\"" | c <- values]) + "]";
+
+    return "
+filters = <colsToKeep>    
+filtered_<source> = []
+for row in <source>:
+    filtered_row = {k: row[k] for k in filters if k in row}
+    filtered_<source>.append(filtered_row)
+<source> = filtered_<source>
+";
+}
+
+list[str] genColOrder(list[Transformation] ts) {
+    list[str] cols = [];
+    set[str] renamed = {};
+    for (t <- ts) {
+        switch (t) {
+            case (Transformation)`keep <String c>`: 
+                if ("<c>" notin renamed) cols += ["<c>"];
+            case (Transformation)`rename <String old> to <String new>`: {
+                renamed += {"<old>"};
+                if ("<old>" in cols) {
+                    int idx = indexOf(cols, "<old>");
+                    cols = [c | c <- cols, c != "<old>"];
+                    cols = cols[0..idx] + ["<new>"] + cols[idx..];
+                } else cols += ["<new>"];
+            }
+            case (Transformation)`sort <String c> (<CastType _>) <SortOrder _>`: 
+                if ("<c>" notin renamed) cols += ["<c>"];
+            case (Transformation)`dropna <String c>`: 
+                if ("<c>" notin renamed) cols += ["<c>"];
+            default:;
+        }
+    }
+    
+    //strip quotes from string
+    cols = [c[1..size(c)-1] | c <- cols];
+    return dup(cols);
+}
+
+str genVisualise(str target, VisType vis) {
     switch (vis) {
-        case defaultVis(): return genVisualiseTable(dataName);
-        case table(): return genVisualiseTable(dataName);
-        case tableImage(): return genVisualiseTableImage(dataName);
-        case pieChart(): return genVisualisePieChart(dataName);
-        case barChart(): return genVisualiseBarChart(dataName);
+        case visTable(): return genVisualiseTable(target);
+        case visTableImage(): return genVisualiseTableImage(target);
+        case pieChart(): return genVisualisePieChart(target);
+        case barChart(): return genVisualiseBarChart(target);
         default: throw "Unknown vis type during codegen <vis>";
     }
 }
 
-// we infer label and value columns from the ordering of columns (documentation)
-str genVisualisePieChart(str dataName) {
-    return 
-"
-if <dataName>:
-    _keys = list(<dataName>[0].keys())
-    _labelCol = _keys[0]
-    _valueCol = _keys[1]
-    _labels = [row[_labelCol] for row in <dataName>]
-    _values = [float(row[_valueCol]) for row in <dataName>]
-    _fig, _ax = plt.subplots()
-    _ax.pie(
-        _values,
-        labels=_labels,
-        autopct=\'%1.1f%%\',
-        startangle=140
-    )
-    _ax.axis(\'equal\')
-    plt.title(\'<dataName>\', fontsize=14, fontweight=\'bold\')
-    plt.tight_layout()
-    plt.savefig(\'<dataName>_pie.png\', dpi=150, bbox_inches=\'tight\')
-    plt.close()
-    print(\'Pie chart saved to <dataName>_pie.png\')
-else:
-    print(\'No data to display for <dataName>.\')
-";
-}
-
-// bar-chart visualisation : first col x-axis labels, second col y-axis values
-// requires a GroupBy before it to set up the label/value columns; same as pie_chart
-str genVisualiseBarChart(str dataName) {
-    return
-"
-if <dataName>:
-    _keys = list(<dataName>[0].keys())
-    _labelCol = _keys[0]
-    _valueCol = _keys[1]
-    _labels = [row[_labelCol] for row in <dataName>]
-    _values = [float(row[_valueCol]) for row in <dataName>]
-    _fig, _ax = plt.subplots(figsize=(max(8, len(_labels) * 1.5), 6))
-    _bars = _ax.bar(_labels, _values, color=\'#4472C4\', edgecolor=\'#2F5597\')
-    for _bar, _val in zip(_bars, _values):
-        _ax.text(_bar.get_x() + _bar.get_width() / 2, _bar.get_height() + 0.3,
-                 str(_val), ha=\'center\', va=\'bottom\', fontweight=\'bold\')
-    _ax.set_xlabel(_labelCol, fontsize=12)
-    _ax.set_ylabel(_valueCol, fontsize=12)
-    _ax.set_title(\'<dataName>\', fontsize=14, fontweight=\'bold\')
-    _ax.spines[\'top\'].set_visible(False)
-    _ax.spines[\'right\'].set_visible(False)
-    plt.tight_layout()
-    plt.savefig(\'<dataName>_bar.png\', dpi=150, bbox_inches=\'tight\')
-    plt.close()
-    print(\'Bar chart saved to <dataName>_bar.png\')
-else:
-    print(\'No data to display for <dataName>.\')
-";
-}
-
-str genVisualiseTable(str dataName) {
-    return
-    
-"
-# visualise <dataName> as table
-if <dataName>:
-    _headers = list(<dataName>[0].keys())
-    _rows = [list(row.values()) for row in <dataName>]
-    print(tabulate(_rows, headers=_headers, tablefmt=\'grid\'))
-else:
-    print(\'No data to display for <dataName>.\')
-";
-}
-
-str genVisualiseTableImage(str dataName) {
-    return
-
-"
-# visualise <dataName> as table image
-if <dataName>:
-    _headers = list(<dataName>[0].keys())
-    _rows = [list(row.values()) for row in <dataName>]
+str genVisualiseTableImage(str target) {
+    return "
+if <target>:
+    _headers = list(<target>[0].keys())
+    _rows = [list(row.values()) for row in <target>]
     _num_cols = len(_headers)
     _num_rows = len(_rows)
     _fig_width = max(8, _num_cols * 2.0)
@@ -328,177 +261,99 @@ if <dataName>:
         else:
             cell.set_facecolor(\'#FFFFFF\')
         cell.set_edgecolor(\'#BFBFBF\')
-    plt.title(\'<dataName>\', fontsize=14, fontweight=\'bold\', pad=20)
+    plt.title(\'<target>\', fontsize=14, fontweight=\'bold\', pad=20)
     plt.tight_layout()
-    plt.savefig(\'<dataName>_table.png\', dpi=150, bbox_inches=\'tight\')
+    plt.savefig(\'<target>_table.png\', dpi=150, bbox_inches=\'tight\')
     plt.close()
-    print(\'Table image saved to <dataName>_table.png\')
-else:
-    print(\'No data to display for <dataName>.\')
 ";
 }
 
-str genValue(ASTValue v) {
-    switch(v) {
-        case intVal(i): return "<i>";
-        case floatVal(f): return "<f>";
-        case stringVal(s): return "\"<s>\"";
-        case boolVal(b): return b ? "True" : "False";
-        case arrayVal(arr): return genList(arr);
-        default: throw "Unknown type";
-    }
-}
-
-str genList(list[ASTValue] values) {
-    return "[" + intercalate(", ", [ genValue(v) | v <- values]) + "]";
-}
-
-str genCast(str col, ASTCast cast) {
-    switch(cast) {
-        case intCast():
-            return "int(row[\"<col>\"])";
-        case floatCast():
-            return "float(row[\"<col>\"])";
-        case stringCast():
-            return "str(row[\"<col>\"])";
-        case boolCast():
-            return "(row[\"<col>\"].strip().lower() == \"true\")";
-        default: throw "Unknown Typed Access";
-    }
-}
-
-str genEqualityOperator(ASTEquality eq) {
-    switch (eq) {
-        case greaterEq(): return "\>=";
-        case greater(): return "\>";
-        case lessEq(): return "\<=";
-        case less(): return "\<";
-        case equals(): return "==";
-        case notEquals(): return "!=";
-        default: throw "Unknown equality operator";
-    }
-}
-
-// rename oldCol to newCol in source
-str genRename(str source, str oldCol, str newCol) {
-    return
-"
-for _row in <source>:
-    _row[\'<newCol>\'] = _row.pop(\'<oldCol>\')
+str genVisualiseTable(str target) {
+    return "
+if <target>:
+    _headers = list(<target>[0].keys())
+    _rows = [list(row.values()) for row in <target>]
+    print(tabulate(_rows, headers=_headers, tablefmt=\'grid\'))
 ";
 }
 
-// sort source by col of type t, descending if specified
-str genSort(str source, str col, ASTCast cast, ASTSort sortOrder) {
-    str access = genCast(col, cast);
-    str rev = (sortOrder == descending()) ? "True" : "False";
-    return
-"
-<source>.sort(key=lambda row: <access>, reverse=<rev>)
+str genVisualisePieChart(str target) {
+    return "
+if <target>:
+    _keys = list(<target>[0].keys())
+    _labelCol = _keys[0]
+    _valueCol = _keys[1]
+    _labels = [row[_labelCol] for row in <target>]
+    _values = [float(row[_valueCol]) for row in <target>]
+    _fig, _ax = plt.subplots()
+    _ax.pie(
+        _values,
+        labels=_labels,
+        autopct=\'%1.1f%%\',
+        startangle=140
+    )
+    _ax.axis(\'equal\')
+    plt.title(\'<target>\', fontsize=14, fontweight=\'bold\')
+    plt.tight_layout()
+    plt.savefig(\'<target>_pie.png\', dpi=150, bbox_inches=\'tight\')
+    plt.close()
 ";
 }
 
-// group cource by col, count occurences
-str genGroupByCount(str source, str groupCol) {
-    return
-"
+str genVisualiseBarChart(str target) {
+    return "
+if <target>:
+    _keys = list(<target>[0].keys())
+    _labelCol = _keys[0]
+    _valueCol = _keys[1]
+    _labels = [row[_labelCol] for row in <target>]
+    _values = [float(row[_valueCol]) for row in <target>]
+    _fig, _ax = plt.subplots(figsize=(max(8, len(_labels) * 1.5), 6))
+    _bars = _ax.bar(_labels, _values, color=\'#4472C4\', edgecolor=\'#2F5597\')
+    for _bar, _val in zip(_bars, _values):
+        _ax.text(_bar.get_x() + _bar.get_width() / 2, _bar.get_height() + 0.3,
+                 str(_val), ha=\'center\', va=\'bottom\', fontweight=\'bold\')
+    _ax.set_xlabel(_labelCol, fontsize=12)
+    _ax.set_ylabel(_valueCol, fontsize=12)
+    _ax.set_title(\'<target>\', fontsize=14, fontweight=\'bold\')
+    _ax.spines[\'top\'].set_visible(False)
+    _ax.spines[\'right\'].set_visible(False)
+    plt.tight_layout()
+    plt.savefig(\'<target>_bar.png\', dpi=150, bbox_inches=\'tight\')
+    plt.close()
+";
+}
+
+str genGroupByAgg(str source, str groupCol, AggType agg, str valueCol, CastType cast) {
+    switch (agg) {
+        case aggSum(): return genGroupByAggGeneralised(source, groupCol, valueCol,
+            "_groups[_key] = _groups.get(_key, 0) + _val",
+            valStep = genCast(valueCol, cast));
+        case aggAvg(): return genGroupByAggGeneralised(source, groupCol, valueCol,
+            "_groups[_key] = _groups.get(_key, 0) + _val\n    _counts[_key] = _counts.get(_key, 0) + 1",
+            valStep = genCast(valueCol, cast), extraInit = "_counts = {}", resultExpr = "_groups[_key] / _counts[_key]");
+        case aggMin(): return genGroupByAggGeneralised(source, groupCol, valueCol,
+            "if _key not in _groups or _val \< _groups[_key]:\n        _groups[_key] = _val",
+            valStep = genCast(valueCol, cast));
+        case aggMax(): return genGroupByAggGeneralised(source, groupCol, valueCol,
+            "if _key not in _groups or _val \> _groups[_key]:\n        _groups[_key] = _val",
+            valStep = genCast(valueCol, cast));
+        default: throw "unknown agg <agg>";
+    }
+}
+
+str genGroupByAggGeneralised(str source, str groupCol, str valueCol, str aggStep,
+                              str valStep = "", str extraInit = "", str resultExpr = "_groups[_key]") {
+    return "
 _groups = {}
+<extraInit>
 for _row in <source>:
-    _key = _row[\'<groupCol>\']
-    _groups[_key] = _groups.get(_key, 0) + 1
-<source> = [{\'<groupCol>\': _key, \'count\': _count} for _key, _count in sorted(_groups.items())]
-print(\'GroupBy <groupCol> (count):\')
+    _key = _row[<groupCol>]
+    <if (valStep != "") {>_val = <valStep>
+    <}><aggStep>
+<source> = [{<groupCol>: _key, <valueCol>: <resultExpr>} for _key in sorted(_groups.keys())]
+print(\"GroupBy <groupCol[1..-1]> ( <valueCol>):\")
 for _key in sorted(_groups.keys()):
-    print(f\'  {_key}: {_groups[_key]}\')
+    print(f\'  {_key}: {<resultExpr>}\')
 ";
 }
-
-// group source by aggregation (sum, avg, min, max)
-str genGroupByAgg(str source, str groupCol, ASTAggType aggType, str valueCol, ASTCast cast) {
-    str typeFunc = genCastFunc(cast);
-
-    if (aggType == aggAvg()) {
-        return genGroupByAvg(source, groupCol, valueCol, typeFunc);
-    }
-    if (aggType == aggMin()) {
-        return genGroupByMinMax(source, groupCol, valueCol, typeFunc, "min", "\<");
-    }
-    if (aggType == aggMax()) {
-        return genGroupByMinMax(source, groupCol, valueCol, typeFunc, "max", "\>");
-    }
-    return genGroupBySum(source, groupCol, valueCol, typeFunc);
-}
-
-// GroupBy: <source> by <groupCol> (sum <valueCol>)
-str genGroupBySum(str source, str groupCol, str valueCol, str typeFunc) {
-    return
-"
-_groups = {}
-for _row in <source>:
-    _key = _row[\'<groupCol>\']
-    _val = <typeFunc>(_row[\'<valueCol>\'])
-    _groups[_key] = _groups.get(_key, 0) + _val
-<source> = [{\'<groupCol>\': _key, \'<valueCol>\': _val} for _key, _val in sorted(_groups.items())]
-print(\'GroupBy <groupCol> (sum <valueCol>):\')
-for _key in sorted(_groups.keys()):
-    print(f\'  {_key}: {_groups[_key]}\')
-";
-}
-
-// GroupBy: <source> by <groupCol> (avg <valueCol>)
-str genGroupByAvg(str source, str groupCol, str valueCol, str typeFunc) {
-    return
-"
-_groups = {}
-_counts = {}
-for _row in <source>:
-    _key = _row[\'<groupCol>\']
-    _val = <typeFunc>(_row[\'<valueCol>\'])
-    _groups[_key] = _groups.get(_key, 0) + _val
-    _counts[_key] = _counts.get(_key, 0) + 1
-<source> = [{\'<groupCol>\': _key, \'<valueCol>\': _groups[_key] / _counts[_key]} for _key in sorted(_groups.keys())]
-print(\'GroupBy <groupCol> (avg <valueCol>):\')
-for _key in sorted(_groups.keys()):
-    print(f\'  {_key}: {_groups[_key] / _counts[_key]}\')
-";
-}
-
-// GroupBy: <source> by <groupCol> (<aggName> <valueCol>)
-str genGroupByMinMax(str source, str groupCol, str valueCol, str typeFunc, str aggName, str op) {
-    return
-"
-_groups = {}
-for _row in <source>:
-    _key = _row[\'<groupCol>\']
-    _val = <typeFunc>(_row[\'<valueCol>\'])
-    if _key not in _groups or _val <op> _groups[_key]:
-        _groups[_key] = _val
-<source> = [{\'<groupCol>\': _key, \'<valueCol>\': _val} for _key, _val in sorted(_groups.items())]
-print(\'GroupBy <groupCol> (<aggName> <valueCol>):\')
-for _key in sorted(_groups.keys()):
-    print(f\'  {_key}: {_groups[_key]}\')
-";
-}
-
-// helper: get the full expression
-str genCastFunc(ASTCast cast) {
-    switch(cast) {
-        case intCast(): return "int";
-        case floatCast(): return "float";
-        case stringCast(): return "str";
-        case boolCast(): return "bool";
-        default: throw "Unknown cast type";
-    }
-}
-
-// helper: get aggregation name as string
-str getAggName(ASTAggType aggType) {
-    switch(aggType) {
-        case aggSum(): return "sum";
-        case aggAvg(): return "avg";
-        case aggMin(): return "min";
-        case aggMax(): return "max";
-        default: throw "Unknown aggregation type";
-    }
-}
-

@@ -8,8 +8,6 @@ import util::LanguageServer;
 import DSL_Grammar;
 import DSL_Analysis;
 import DSL_CodeGen;
-import DSL_Transformation;
-import DSL_AST;
 
 void main(loc file) {
     println("Processing file: <file>");
@@ -26,11 +24,8 @@ void main(loc file) {
         return;
     }
 
-    // Step 2.5: AST transformation
-    ASTProgram cmd = toAST(tree);
-
     // Step 3: Code generation
-    str output = generate(cmd);
+    str output = generate(tree);
     str baseName = file.file[0..-6];
     loc outFile = file.parent + "<baseName>.py";
     writeFile(outFile, output);
