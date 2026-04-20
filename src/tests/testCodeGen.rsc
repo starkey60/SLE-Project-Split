@@ -2,20 +2,21 @@ module tests::testCodeGen
 
 import backend::CodeGen;
 import frontend::Grammar;
+import ParseTree;
 import String;
 import IO;
 
-// genValue
-test bool testIntVal() = genValue((Value)`-42`) == "-42";
-test bool testFloatVal() = genValue((Value)`3.14`) == "3.14";
-test bool testStringVal() = genValue((Value)`"hello"`) == "\"hello\"";
-test bool testBoolValTrue() = genValue((Value)`true`) == "True";
-test bool testBoolValFalse() = genValue((Value)`false`) == "False";
+// Value
+test bool testIntVal() = generate((Value)`-42`) == "-42";
+test bool testFloatVal() = generate((Value)`3.14`) == "3.14";
+test bool testStringVal() = generate((Value)`"hello"`) == "\"hello\"";
+test bool testBoolValTrue() = generate((Value)`true`) == "True";
+test bool testBoolValFalse() = generate((Value)`false`) == "False";
 
-// genList
-test bool testGenListEmpty() = genList([]) == "[]";
-test bool testGenListSingle() = genList([(Value)`1`]) == "[1]";
-test bool testGenListMultiple() = genList([(Value)`4`, (Value)`0`, (Value)`4`]) == "[4, 0, 4]";
+// List
+test bool testGenListEmpty() = generate((Value)`[]`) == "[]";
+test bool testGenListSingle() = generate((Value)`[1]`) == "[1]";
+test bool testGenListMultiple() = generate((Value)`[4, 0, 4]`) == "[4, 0, 4]";
 
 // genCast
 test bool testIntCast() = genCast("\"age age\"", (CastType)`int`) == "int(row[\"age age\"])";
@@ -31,14 +32,14 @@ test bool testEqLess() = genEqualityOperator((EqualityOp)`\<`) == "\<";
 test bool testEqEquals() = genEqualityOperator((EqualityOp)`==`) == "==";
 test bool testEqNotEquals() = genEqualityOperator((EqualityOp)`!=`) == "!=";
 
-// genFilterCondition
+// FilterCondition
 test bool testFilterConditionEquality() {
-    str result = genFilterCondition((FilterCondition)`"age" (int) \>= 30`);
+    str result = generate((FilterCondition)`"age" (int) \>= 30`);
     return result == "int(row[\"age\"]) \>= 30";
 }
 
 test bool testFilterConditionInList() {
-    str result = genFilterCondition((FilterCondition)`"country" (string) in ["NL", "DE"]`);
+    str result = generate((FilterCondition)`"country" (string) in ["NL", "DE"]`);
     return result == "str(row[\"country\"]) in [\"NL\", \"DE\"]";
 }
 
@@ -59,17 +60,19 @@ test bool testgenSortTransformationsDescending() {
     return contains(result, "reverse=True") && contains(result, "float(row[\"price\"])");
 }
 
-// genLoad
-test bool testGenLoad() {
-    str result = genLoad("\"data/file.csv\"", "myData");
+// Load
+test bool testGenSave() {
+    Element el = parse(#Element, "Load \"data/file.csv\" as myData");
+    str result = generate(el);
     return contains(result, "open(\"data/file.csv\"")
         && contains(result, "myData = []")
         && contains(result, "myData.append(row)");
 }
 
-// genSave
+// Save
 test bool testGenSave() {
-    str result = genSave("\"out/file.csv\"", "myData");
+    Element el = parse(#Element, "Save myData as \"out/file.csv\"");
+    str result = generate(el);
     return contains(result, "open(\"out/file.csv\", \"w\"")
         && contains(result, "writer.writerows(myData)");
 }
@@ -121,9 +124,9 @@ test bool testGroupByMax() {
         && contains(result, "\>");
 }
 
-// genFilterDataset
+// Filter
 test bool testFilterDatasetSingleCondition() {
-    str result = genFilter("data", [genFilterCondition((FilterCondition)`"age" (int) \>= 18`)]);
+    str result = generate((Element)`Filter data { "age" (int) \>= 18 }`);
     return contains(result, "data_filtered = []")
         && contains(result, "for row in data")
         && contains(result, "int(row[\"age\"]) \>= 18")
@@ -132,82 +135,75 @@ test bool testFilterDatasetSingleCondition() {
 }
 
 test bool testFilterDatasetMultipleConditions() {
-    str result = genFilter("data", [
-        genFilterCondition((FilterCondition)`"age" (int) \>= 18`),
-        genFilterCondition((FilterCondition)`"country" (string) in ["NL", "DE"]`)
-    ]);
+    Element el = parse(#Element, "Filter data { \"age\" (int) \>= 18\n\"country\" (string) in [\"NL\", \"DE\"] }");
+    str result = generate(el);
     return contains(result, "int(row[\"age\"]) \>= 18")
         && contains(result, "str(row[\"country\"]) in [\"NL\", \"DE\"]");
 }
 
 test bool testFilterDatasetEmptyFilters() {
-    str result = genFilter("data", []);
+    str result = generate((Element)`Filter data {  }`);
     return result == "";
 }
 
 // genTransform
 test bool testTransformDatasetRenameOnly() {
-    str result = genTransform("data", [(Transformation)`keep "a"`, (Transformation)`rename "a" to "b"`]);
+    Element el = parse(#Element, "Transform data { keep \"a\" rename \"a\" to \"b\" }");
+    str result = generate(el);
     return contains(result, "_row[\"b\"] = _row.pop(\"a\")")
         && contains(result, "filters = [\"b\"]");
 }
 
 test bool testTransformDatasetSortOnly() {
-    str result = genTransform("data", [(Transformation)`keep "age"`, (Transformation)`sort "age" (int) ascending`]);
+    Element el = parse(#Element, "Transform data { keep \"age\" sort \"age\" (int) ascending }");
+    str result = generate(el);
     return contains(result, "data.sort(key=lambda row: int(row[\"age\"])")
         && contains(result, "reverse=False");
 }
 
 test bool testTransformDatasetDropnaOnly() {
-    str result = genTransform("data", [(Transformation)`keep "name"`, (Transformation)`dropna "name"`]);
+    Element el = parse(#Element, "Transform data { keep \"name\" dropna \"name\" }");
+    str result = generate(el);
     return contains(result, "data_clean = []")
         && contains(result, "str(row[\"name\"]).strip() != \'\'")
         && contains(result, "data = data_clean");
 }
 
 test bool testTransformDatasetCombined() {
-    str result = genTransform("data", [
-        (Transformation)`keep "name"`,
-        (Transformation)`keep "age"`,
-        (Transformation)`dropna "name"`,
-        (Transformation)`rename "age" to "years"`,
-        (Transformation)`sort "years" (int) descending`
-    ]);
+    Element el = parse(#Element, "Transform data { keep \"name\" keep \"age\" dropna \"name\" rename \"age\" to \"years\" sort \"years\" (int) descending }");
+    str result = generate(el);
     return contains(result, "data_clean = []")
         && contains(result, "_row[\"years\"] = _row.pop(\"age\")")
         && contains(result, "reverse=True")
         && contains(result, "filters = [\"name\", \"years\"]");
 }
 
-// genVisualiseTable
+// Visualise
 test bool testVisualiseTable() {
-    str result = genVisualiseTable("myData");
+    str result = generate((Element)`Visualise myData`);
     return contains(result, "if myData:")
         && contains(result, "_headers = list(myData[0].keys())")
         && contains(result, "_rows = [list(row.values()) for row in myData]")
         && contains(result, "print(tabulate(_rows, headers=_headers");
 }
 
-// genVisualiseTableImage
 test bool testVisualiseTableImage() {
-    str result = genVisualiseTableImage("myData");
+    str result = generate((Element)`Visualise myData using table_image`);
     return contains(result, "if myData:")
         && contains(result, "_headers = list(myData[0].keys())")
         && contains(result, "plt.savefig(\'myData_table.png\'");
 }
 
-// genVisualisePieChart
 test bool testVisualisePieChart() {
-    str result = genVisualisePieChart("myData");
+    str result = generate((Element)`Visualise myData using pie_chart`);
     return contains(result, "if myData:")
         && contains(result, "_labelCol = _keys[0]")
         && contains(result, "_valueCol = _keys[1]")
         && contains(result, "plt.savefig(\'myData_pie.png\'");
 }
 
-// genVisualiseBarChart
 test bool testVisualiseBarChart() {
-    str result = genVisualiseBarChart("myData");
+    str result = generate((Element)`Visualise myData using bar_chart`);
     return contains(result, "if myData:")
         && contains(result, "_labelCol = _keys[0]")
         && contains(result, "_valueCol = _keys[1]")
