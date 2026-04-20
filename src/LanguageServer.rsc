@@ -18,7 +18,7 @@ Language DELTA = language(
     pathConfig(srcs=[|project://SLE-Project-Split/src|]),
     "DELTA",
     {"delta"},
-    "DSL_LSP",
+    "LanguageServer",
     "dslServices"
 );
 
