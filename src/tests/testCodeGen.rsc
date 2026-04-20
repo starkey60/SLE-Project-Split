@@ -1,7 +1,7 @@
 module tests::testCodeGen
 
-import DSL_CodeGen;
-import DSL_Grammar;
+import backend::CodeGen;
+import frontend::Grammar;
 import String;
 import IO;
 

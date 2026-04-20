@@ -1,4 +1,4 @@
-module DSL_Grammar
+module frontend::Grammar
 
 start syntax DELTA
   = element: Element*;

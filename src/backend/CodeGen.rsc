@@ -1,6 +1,6 @@
-module DSL_CodeGen
+module backend::CodeGen
 
-import DSL_Grammar;
+import frontend::Grammar;
 import String;
 import List;
 

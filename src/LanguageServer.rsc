@@ -1,4 +1,4 @@
-module DSL_LSP
+module LanguageServer
 
 import util::LanguageServer;
 import util::IDEServices;
@@ -6,8 +6,8 @@ import util::Reflective;
 import String;
 import ParseTree;
 
-import DSL_Grammar;
-import DSL_Analysis;
+import frontend::Grammar;
+import frontend::StaticAnalysis;
 
 set[LanguageService] dslServices() = {
     parsing(parser(#start[DELTA])),

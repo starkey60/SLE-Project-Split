@@ -1,13 +1,13 @@
-module DSL_Main
+module Main
 
 import IO;
 import List;
 import ParseTree;
 import util::LanguageServer;
 
-import DSL_Grammar;
-import DSL_Analysis;
-import DSL_CodeGen;
+import frontend::Grammar;
+import frontend::StaticAnalysis;
+import backend::CodeGen;
 
 void main(loc file) {
     println("Processing file: <file>");

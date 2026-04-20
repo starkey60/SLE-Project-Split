@@ -1,6 +1,6 @@
 module tests::testGrammarParsing
 
-import DSL_Grammar;
+import frontend::Grammar;
 import ParseTree;
 
 test bool testEmptyProgram() {
