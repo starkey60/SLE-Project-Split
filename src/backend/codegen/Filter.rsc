@@ -4,28 +4,24 @@ import frontend::Grammar;
 import backend::codegen::Extra;
 import List;
 
-str genFilter(str source, list[str] filters) {
+str generate((Element)`Filter <Identifier id> { <FilterCondition* conditions> }`) {
+    list[str] filters = [generate(f) | f <- conditions];
     if (isEmpty(filters)) return "";
     str conds = intercalate( " and\n", ["      " + f | f <- filters] );
 
     return "
-<source>_filtered = []
-for row in <source>:
+<id>_filtered = []
+for row in <id>:
     if (
 <conds>
     ):
-        <source>_filtered.append(row)
-<source> = <source>_filtered
+        <id>_filtered.append(row)
+<id> = <id>_filtered
 ";
 }
 
-str genFilterCondition(FilterCondition f) {
-    switch (f) {
-        case (FilterCondition)`<String col> (<CastType t>) in [<{Value ","}* vals>]`: {
-            return "<genCast("<col>", t)> in <genList([v | v <- vals])>";
-        }
-        case (FilterCondition)`<String col> (<CastType t>) <EqualityOp op> <Value v>`:
-            return "<genCast("<col>", t)> <genEqualityOperator(op)> <genValue(v)>";
-        default: throw "unknown filter condition <f>";
-    }
-}
+str generate((FilterCondition)`<String col> (<CastType t>) in [<{Value ","}* vals>]`) =
+    "<genCast("<col>", t)> in [<intercalate(", ", [generate(v) | v <- vals])>]";
+
+str generate((FilterCondition)`<String col> (<CastType t>) <EqualityOp op> <Value v>`) =
+    "<genCast("<col>", t)> <genEqualityOperator(op)> <generate(v)>";

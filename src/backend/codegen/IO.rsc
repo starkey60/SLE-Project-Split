@@ -1,22 +1,24 @@
 module backend::codegen::IO
 
-str genLoad(str path, str name) {
+import frontend::Grammar;
+
+str generate((Element)`Load <String path> as <Identifier id>`) {
     return "
-<name> = []
+<id> = []
 with open(<path>, newline=\"\") as f:
     reader = csv.DictReader(f)
     for row in reader:
-        <name>.append(row)
+        <id>.append(row)
 ";
 }
 
-str genSave(str path, str name) {
+str generate((Element)`Save <Identifier id> as <String path>`) {
     return "
 with open(<path>, \"w\", newline=\"\") as f:
-    if <name>:
-        fields = <name>[0].keys()
+    if <id>:
+        fields = <id>[0].keys()
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
-        writer.writerows(<name>)
+        writer.writerows(<id>)
 ";
 }

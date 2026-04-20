@@ -4,36 +4,24 @@ import frontend::Grammar;
 import List;
 import String;
 
-str genCast(str col, CastType cast) {
-    switch (cast) {
-        case (CastType) `int`: return "int(row[<col>])";
-        case (CastType) `float`:  return "float(row[<col>])";
-        case (CastType) `string`: return "str(row[<col>])";
-        case (CastType) `bool`:  return "(row[<col>].strip().lower() == \"true\")";
-        default: throw "unknown cast type <cast>";
-    }
-}
+str genCast(str col, (CastType)`int`) = "int(row[<col>])";
+str genCast(str col, (CastType)`float`) = "float(row[<col>])";
+str genCast(str col, (CastType)`string`) = "str(row[<col>])";
+str genCast(str col, (CastType)`bool`) = "(row[<col>].strip().lower() == \"true\")";
 
-str genValue(Value v) {
-    switch (v) {
-        case (Value)`<String s>`:
-            return "<s>";
-        case (Value)`<Boolean b>`:
-            return ("<b>" == "true") ? "True" : "False";
-        case (Value)`<Number n>`: {
-            str raw = "<n>";
-            return contains(raw, ".")
-                ? "<toReal(raw)>"
-                : "<toInt(raw)>";
-        }
-        case (Value)`[<{Value ","}* vals>]`:
-            return genList([val | val <- vals]);
-        default: throw "Could not transform value <v>";
-    }
-}
+str generate((Value)`[<{Value ","}* values>]`) =
+    "[" + intercalate(", ", [ generate(v) | v <- values]) + "]";
 
-str genList(list[Value] values) {
-    return "[" + intercalate(", ", [ genValue(v) | v <- values]) + "]";
+str generate((Value)`<String s>`) = "<s>";
+
+str generate((Value)`<Boolean b>`) =
+    ("<b>" == "true") ? "True" : "False";
+
+str generate((Value)`<Number n>`) {
+    str raw = "<n>";
+    return contains(raw, ".")
+        ? "<toReal(raw)>"
+        : "<toInt(raw)>";
 }
 
 str genEqualityOperator(EqualityOp eq) = "<eq>";

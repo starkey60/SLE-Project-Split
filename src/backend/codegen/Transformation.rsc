@@ -5,18 +5,20 @@ import backend::codegen::Extra;
 import List;
 import String;
 
-str genTransform(str source, list[Transformation] transformations) {
+str generate((Element)`Transform <Identifier id> { <Transformation* transformations> }`) {
     // separate different transformations
-    list[Transformation] renames = [t | t <- transformations, t is rename];
-    str renamesTransformations = isEmpty(renames) ? "" : genRenameTransformations(source, renames);
+    list[Transformation] ts = [t | t <- transformations];
 
-    list[Transformation] sorts = [t | t <- transformations, t is sortBy];
-    str sortsTransformations = isEmpty(sorts) ? "" : genSortTransformations(source, sorts);
+    list[Transformation] renames = [t | t <- ts, t is rename];
+    str renamesTransformations = isEmpty(renames) ? "" : genRenameTransformations("<id>", renames);
 
-    list[Transformation] dropnas = [t | t <- transformations, t is dropna];
-    str dropnasTransformations = isEmpty(dropnas) ? "" : genDropnaTransformations(source, dropnas);
+    list[Transformation] sorts = [t | t <- ts, t is sortBy];
+    str sortsTransformations = isEmpty(sorts) ? "" : genSortTransformations("<id>", sorts);
 
-    str keeps = genKeepTransformation(source, transformations);
+    list[Transformation] dropnas = [t | t <- ts, t is dropna];
+    str dropnasTransformations = isEmpty(dropnas) ? "" : genDropnaTransformations("<id>", dropnas);
+
+    str keeps = genKeepTransformation("<id>", ts);
 
     return "<dropnasTransformations> <renamesTransformations> <sortsTransformations> <keeps>";
 }
