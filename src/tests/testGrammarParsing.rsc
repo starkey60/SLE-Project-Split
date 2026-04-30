@@ -1,10 +1,10 @@
 module tests::testGrammarParsing
 
-import DSL_Grammar;
+import frontend::Grammar;
 import ParseTree;
 
 test bool testEmptyProgram() {
-    parse(#start[DSL], "");
+    parse(#start[DELTA], "");
     return true;
 }
 
@@ -205,18 +205,18 @@ test bool testInvalidIdentifierStartsWithNumber() {
 }
 
 test bool testInlineComment() {
-    parse(#start[DSL], "Load \"data.csv\" as my_data // this is a comment");
+    parse(#start[DELTA], "Load \"data.csv\" as my_data // this is a comment");
     return true;
 }
 
 test bool testBlockComment() {
-    parse(#start[DSL], "/* block comment */\nLoad \"data.csv\" as my_data");
+    parse(#start[DELTA], "/* block comment */\nLoad \"data.csv\" as my_data");
     return true;
 }
 
 test bool testInvalidComment() {
     try {
-        parse(#start[DSL], "Load \"data.csv\" as my_data % this is a comment");
+        parse(#start[DELTA], "Load \"data.csv\" as my_data % this is a comment");
         return false;
     } catch: return true;
 }

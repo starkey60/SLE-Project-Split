@@ -1,4 +1,4 @@
-module DSL_Analysis
+module frontend::StaticAnalysis
 
 import util::LanguageServer;
 import util::IDEServices;
@@ -7,7 +7,7 @@ import ParseTree;
 import String;
 import IO;
 
-import DSL_Grammar;
+import frontend::Grammar;
 
 rel[loc, Message] checkRef(str name, loc src, map[str, loc] datasets) =
     name notin datasets ? {<src, error("E01: Undefined dataset \'<name>\'", src)>} : {};
