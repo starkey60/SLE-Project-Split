@@ -58,6 +58,8 @@ Errors:
     * Incorrect cast when using GroupBy with an Agg (should be (int) or (float))
 * **E07**: Sort requires numeric cast (int or float), got \<cast\> on \<col\>
     * Sorting requires a numeric cast
+* **E08**: Take N count argument has to be an integer, float given
+    * 
     
 This should result in errors showing when a .dsl file cant be parsed in vscode itself. However, no concrete error messages are shown, nor syntax is highlighted.
 

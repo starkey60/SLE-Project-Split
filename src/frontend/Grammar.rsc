@@ -13,6 +13,7 @@ syntax Element
   | visualiseUsing: "Visualise" Identifier "using" VisType
   | groupByCount: "GroupBy" Identifier "by" String "count"
   | groupByAgg: "GroupBy" Identifier "by" String AggType String "(" CastType ")"
+  | takeN: "Take" Number Identifier
   ;
 
 // filter conditions (inside Filter block)

@@ -1,0 +1,13 @@
+/*
+    This test file covers sorting and then taking top 5 elements from a dataset
+*/
+
+Load "data.csv" as employee_data
+
+Transform employee_data {
+    sort "Income" (float) ascending
+}
+
+Take 5 employee_data
+
+Save employee_data as "save_path.csv"

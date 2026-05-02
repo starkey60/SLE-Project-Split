@@ -10,6 +10,7 @@ extend backend::codegen::Transformation;
 extend backend::codegen::Visualise;
 extend backend::codegen::IO;
 extend backend::codegen::Filter;
+extend backend::codegen::TakeN;
 
 str generate(start[DELTA] dlt) {
     str code = "import csv\n\n";

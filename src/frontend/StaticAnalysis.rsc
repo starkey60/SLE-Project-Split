@@ -195,6 +195,11 @@ Summary dslSummarizer(loc l, start[DELTA] input) {
                     if (!isNumericCast(cast)) msgs += {<cast.src, error("E06: Agg groupings can only use numeric casts", cast.src)>};
                     hovs += <e.src, "Group dataset **<name>** by `<c>`, computing <agg> of `<v>` (cast to <cast>)">;
                 }
+                case (Element)`Take <Number n> <Identifier name>`: {
+                    registerRef(name);
+                    if (contains("<n>", ".")) msgs += {<n.src, error("E09: Take N count argument has to be an integer, float given", n.src)>};
+                    hovs += <e.src, "Take first <n> elements from  **<name>**">;
+                }
                 default: msgs += {};
             }
         }
